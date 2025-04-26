@@ -8,8 +8,7 @@ export const ReportRequestSchema = z
     date_start: z.string().date().describe('Fecha de entrada'),
     date_end: z.string().date().describe('Fecha de salida')
   })
-  .required()
-  .strict();
+  .required();
 
 // Esquema para la respuesta con fecha procesada
 export const ReportResponseSchema = z.object({
@@ -17,12 +16,10 @@ export const ReportResponseSchema = z.object({
   dateStart: z.string().describe('Fecha de entrada'),
   dateEnd: z.string().describe('Fecha de salida'),
 })
-.required()
-.strict();;
+.required();
 
-// DTOs generados automáticamente para Swagger
-// export type ReportRequestDto = z.infer<typeof ReportRequestSchema>;
-// export type ReportResponseDto = z.infer<typeof ReportResponseSchema>;
+export type ReportRequestDtoType = z.infer<typeof ReportRequestSchema>;
+export type ReportResponseDtoType = z.infer<typeof ReportResponseSchema>;
 
 export class ReportRequestDto extends createZodDto(ReportRequestSchema) {}
 export class ReportResponseDto extends createZodDto(ReportResponseSchema) {}
