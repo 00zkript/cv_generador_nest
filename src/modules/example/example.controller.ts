@@ -11,7 +11,7 @@ import { CustomZodValidationPipe } from "@/validations/customZodValidationPipe";
 @Controller('example')
 @UsePipes(ZodValidationPipe)
 export class ExampleController {
-    constructor(private readonly exampleService: ExampleService){}
+    constructor(private readonly exampleService: ExampleService) { }
 
     @Get('test-1')
     @ApiOperation({ summary: 'Obtener saludo con fecha' })
@@ -22,8 +22,8 @@ export class ExampleController {
 
     @Get('test-2')
     @ApiOperation({ summary: 'Obtener saludo en formato JSON' })
-    @ApiResponse({ 
-        status: 200, 
+    @ApiResponse({
+        status: 200,
         type: HelloResponseDto // Mucho más simple que definir el schema manualmente
     })
     getHello2(): HelloResponseDto {
@@ -31,27 +31,26 @@ export class ExampleController {
             hello: 'world'
         };
     }
-    
 
-    
+
+
 
     @Get('reports')
     @ApiOperation({ summary: 'Procesar fecha con validación Zod' })
-    @ApiResponse({ 
-        status: 200, 
+    @ApiResponse({
+        status: 200,
         type: ReportResponseDto,
         description: 'Retorna la fecha procesada'
     })
-    @ApiResponse({ 
-        status: 400, 
+    @ApiResponse({
+        status: 400,
         description: 'Error processing the request'
     })
     @ApiQuery({ name: 'date_start', required: true, type: String })
     @ApiQuery({ name: 'date_end', required: true, type: String })
     report(
         @Query() reportRequestDto: ReportRequestDto
-    ) : ReportResponseDto
-    {
+    ): ReportResponseDto {
         try {
             // La fecha ya está validada gracias al pipe
             return this.exampleService.processDate(reportRequestDto.date_start, reportRequestDto.date_end);
@@ -65,17 +64,12 @@ export class ExampleController {
     @Post('reports-2')
     // @UsePipes( new CustomZodValidationPipe(ReportRequestSchema))
     @ApiBody({ type: ReportRequestDto })
-    @ApiResponse({ 
-        status: 200, 
-        type: ReportResponseDto,
-        description: 'Retorna la fecha procesada'
-    })
-    @ApiResponse({ 
-        status: 400, 
+    @ApiResponse({ status: 200, type: ReportResponseDto, description: 'Retorna la fecha procesada' })
+    @ApiResponse({
+        status: 400,
         description: 'Error processing the request'
     })
-    report2(@Body() reportRequestDto: ReportRequestDto ) : ReportResponseDto
-    {
+    report2(@Body() reportRequestDto: ReportRequestDto): ReportResponseDto {
         try {
             // La fecha ya está validada gracias al pipe
             return this.exampleService.processDate(reportRequestDto.date_start, reportRequestDto.date_end);
@@ -83,18 +77,17 @@ export class ExampleController {
             throw new BadRequestException('Error al procesar la fecha: ' + (error instanceof Error ? error.message : 'Error desconocido'));
         }
     }
-    
+
 
 
 
     @Get('objeto-validado')
     @ApiOperation({ summary: 'Validar objeto completo con Zod' })
-    @ApiResponse({ 
-        status: 200, 
+    @ApiResponse({
+        status: 200,
         type: ReportResponseDto
     })
-    getValidatedObject(@Body() reportRequestDto: ReportRequestDto) : ReportResponseDto
-    {
+    getValidatedObject(@Body() reportRequestDto: ReportRequestDto): ReportResponseDto {
         // Todo el objeto query ya está validado por el pipe a nivel de controlador
         return this.exampleService.processDate(reportRequestDto.date_start, reportRequestDto.date_end);
     }

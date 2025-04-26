@@ -1,4 +1,27 @@
 {
-  "singleQuote": false,
-  "trailingComma": "all"
+    "singleQuote": true,
+    "semi": true,
+    "useTabs": false,
+    "tabWidth": 4,
+    "printWidth": 80,
+    "bracketSpacing": true,
+    "trailingComma": "es5",
+    "jsxBracketSameLine": false,
+    "parser": "babel",
+    "proseWrap": "preserve",
+    "overrides": [
+        {
+            "files": "*.vue",
+            "options": {
+                "vueIndentScriptAndStyle": true
+            }
+        },
+        {
+            "files": "*.html",
+            "options": {
+                "printWidth": 200,
+                "htmlWhitespaceSensitivity": "ignore"
+            }
+        }
+    ]
 }
