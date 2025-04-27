@@ -1,40 +1,95 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from "@nestjs/common";
+import { ZodValidationPipe } from "@anatine/zod-nestjs";
+import { Body, Controller, Delete, Get, Param, Post, Put, UsePipes } from "@nestjs/common";
+import { ApiAcceptedResponse, ApiBadRequestResponse, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { CvService } from "./cv.service";
+import { CvDto, RequestCvDto } from "./schemas/cv.schema";
 
-
+@ApiTags('cvs')
 @Controller('cvs')
-export class CvController 
-{
+@UsePipes(ZodValidationPipe)
+export class CvController {
+
+    constructor(
+        private readonly cvService: CvService
+    ) { }
 
     @Get()
+    @ApiOperation({ summary: 'Obtener todos los cvs' })
+    @ApiOkResponse({
+        description: 'Retorna todos los cvs',
+        type: [CvDto]
+    })
+    @ApiBadRequestResponse({
+        description: 'Error al obtener los cvs',
+        type: Error
+    })
     index() {
+        return this.cvService.getCvs();
     }
-    
+
     @Get(':id')
-    show(@Param('id') id:number)  {
-        return {
-            id: id,
-            name: 'Cv'
-        };
+    @ApiOperation({ summary: 'Obtener un cv' })
+    @ApiOkResponse({
+        description: 'Retorna un cv',
+        type: CvDto
+    })
+    @ApiBadRequestResponse({
+        description: 'Error al obtener el cv',
+        type: Error
+    })
+    show(@Param('id') id: number) {
+        return this.cvService.getCv(id);
     }
-    
+
     @Post()
-    store(@Body() data: object) {
+    @ApiOperation({ summary: 'Crear un cv' })
+    @ApiCreatedResponse({
+        description: 'Cv creado',
+        type: CvDto
+    })
+    store(@Body() data: RequestCvDto) {
+        return this.cvService.storeCv(data);
     }
-    
+
     @Put(':id')
-    update(@Param('id') id : number, data) {
+    @ApiOperation({ summary: 'Actualizar un cv' })
+    @ApiAcceptedResponse({
+        description: 'Cv actualizado',
+        type: CvDto
+    })
+    update(@Param('id') id: number, @Body() data: RequestCvDto) {
+        return this.cvService.updateCv(id, data);
     }
-    
+
     @Delete(':id')
-    destroy(@Param('id') id : number) {
+    @ApiOperation({ summary: 'Eliminar un cv' })
+    @ApiOkResponse({
+        description: 'Cv eliminado',
+        type: CvDto
+    })
+    destroy(@Param('id') id: number) {
+        return this.cvService.deleteCv(id);
     }
-    
+
     @Post(':id/duplicate')
-    duplicate(@Param('id') id : number) {
+    @ApiOperation({ summary: 'Duplicar un cv' })
+    @ApiCreatedResponse({
+        description: 'Cv duplicado',
+        type: CvDto
+    })
+    duplicate(@Param('id') id: number) {
+        return this.cvService.duplicateCv(id);
     }
-    
+
     @Get(':id/pdf')
-    pdf(@Param('id') id : number) {}
+    @ApiOperation({ summary: 'Obtener el pdf de un cv' })
+    @ApiHeader({
+        name: 'Content-Type',
+        description: 'application/pdf',
+    })
+    pdf(@Param('id') id: number) {
+        return this.cvService.getPdf(id);
+    }
 
 
 }

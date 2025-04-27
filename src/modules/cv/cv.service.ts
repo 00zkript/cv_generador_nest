@@ -181,7 +181,7 @@ export class CvService {
         }
     }
 
-    async copyCv(id: number): Promise<Cv> {
+    async duplicateCv(id: number): Promise<Cv> {
         const queryRunner = await this.startTransaction();
 
         try {
@@ -262,6 +262,9 @@ export class CvService {
         finally {
             await queryRunner.release();
         }
+    }
+
+    async getPdf(id: number) {
     }
 
     private async startTransaction(): Promise<QueryRunner> {

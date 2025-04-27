@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 // Esquema para el CV básico
 export const CvSchema = z.object({
+    id: z.number().optional(),
     title: z.string().describe('Título del CV'),
     description: z.string().describe('Descripción del CV'),
     status: z.boolean().default(true).describe('Estado del CV')
