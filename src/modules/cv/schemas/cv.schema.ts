@@ -11,6 +11,7 @@ export const CvSchema = z.object({
 
 // Esquema para el contacto
 export const ContactSchema = z.object({
+    id: z.number().optional(),
     name: z.string().describe('Nombre completo'),
     email: z.string().email().describe('Correo electrónico'),
     phone: z.string().describe('Número de teléfono'),
@@ -21,28 +22,32 @@ export const ContactSchema = z.object({
 
 // Esquema para logros
 export const AchievementSchema = z.object({
+    id: z.number().optional(),
     description: z.string().describe('Descripción del logro')
 }).required();
 
 // Esquema para experiencia laboral
 export const WorkExperienceSchema = z.object({
+    id: z.number().optional(),
     company: z.string().describe('Nombre de la empresa'),
     position: z.string().describe('Cargo o posición'),
     start_date: z.string().describe('Fecha de inicio'),
     end_date: z.string().optional().describe('Fecha de finalización'),
     current: z.boolean().default(false).describe('Trabajo actual'),
     description: z.string().describe('Descripción del trabajo'),
-    achievements: z.array(AchievementSchema).describe('Logros en el trabajo')
+    achievements: z.array(AchievementSchema.omit({ id: true })).describe('Logros en el trabajo')
 }).required();
 
 // Esquema para habilidades
 export const SkillSchema = z.object({
+    id: z.number().optional(),
     name: z.string().describe('Nombre de la habilidad'),
     level: z.number().min(1).max(5).describe('Nivel de la habilidad (1-5)')
 }).required();
 
 // Esquema para estudios
 export const StudySchema = z.object({
+    id: z.number().optional(),
     institution: z.string().describe('Nombre de la institución'),
     degree: z.string().describe('Título obtenido'),
     field: z.string().describe('Campo de estudio'),
@@ -53,18 +58,19 @@ export const StudySchema = z.object({
 
 // Esquema para idiomas
 export const LanguageSchema = z.object({
+    id: z.number().optional(),
     name: z.string().describe('Nombre del idioma'),
     level: z.string().describe('Nivel del idioma')
 }).required();
 
 // Esquema completo para CV con detalles
 export const RequestCvSchema = z.object({
-    cv: CvSchema,
-    contact: ContactSchema.optional(),
-    works_experiences: z.array(WorkExperienceSchema),
-    skills: z.array(SkillSchema),
-    studies: z.array(StudySchema),
-    languages: z.array(LanguageSchema)
+    cv: CvSchema.omit({ id: true }),
+    contact: ContactSchema.omit({ id: true }),
+    works_experiences: z.array(WorkExperienceSchema.omit({ id: true })),
+    skills: z.array(SkillSchema.omit({ id: true })),
+    studies: z.array(StudySchema.omit({ id: true })),
+    languages: z.array(LanguageSchema.omit({ id: true }))
 }).required();
 
 // Tipos inferidos de los esquemas

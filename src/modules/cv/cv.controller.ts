@@ -1,8 +1,10 @@
 import { ZodValidationPipe } from "@anatine/zod-nestjs";
-import { Body, Controller, Delete, Get, Param, Post, Put, UsePipes } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, Res, UsePipes } from "@nestjs/common";
 import { ApiAcceptedResponse, ApiBadRequestResponse, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CvService } from "./cv.service";
 import { CvDto, RequestCvDto } from "./schemas/cv.schema";
+import { Response } from "express";
+import { Readable } from "stream";
 
 @ApiTags('cvs')
 @Controller('cvs')
@@ -83,12 +85,22 @@ export class CvController {
 
     @Get(':id/pdf')
     @ApiOperation({ summary: 'Obtener el pdf de un cv' })
-    @ApiHeader({
-        name: 'Content-Type',
-        description: 'application/pdf',
-    })
-    pdf(@Param('id') id: number) {
-        return this.cvService.getPdf(id);
+    async pdf(@Param('id') id: number, @Res() res: Response) {
+        const pdfBuffer = await this.cvService.getPdf(id);
+
+        const stream = new Readable();
+        stream.push(pdfBuffer);
+        stream.push(null);
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            // 'Content-Disposition': `attachment; filename="archivo-${id}.pdf"`,
+            'Content-Disposition': `inline; filename="cv-${id}.pdf"`,
+            'Content-Length': pdfBuffer.length,
+        });
+
+        // res.send(pdfBuffer);
+        stream.pipe(res);
     }
 
 

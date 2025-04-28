@@ -7,8 +7,14 @@ import { Achievement } from './entity/achievement.entity';
 import { Skill } from './entity/skill.entity';
 import { Study } from './entity/study.entity';
 import { Language } from './entity/language.entity';
-import { RequestCvDto, WorkExperienceDto } from './schemas/cv.schema';
+import { RequestCvDto } from './schemas/cv.schema';
 import { ZodValidationPipe } from '@anatine/zod-nestjs';
+import * as puppeteer from 'puppeteer';
+import * as Handlebars from 'handlebars';
+import { readFile } from 'fs/promises';
+
+
+
 
 @Injectable()
 @UsePipes(ZodValidationPipe)
@@ -33,14 +39,24 @@ export class CvService {
     async getCvs(): Promise<Cv[]> {
         return this.cvRepository.find({
             where: { status: true },
-            relations: this.relations
+            relations: this.relations,
+            order: {
+                works_experiences: {
+                    id: 'DESC'
+                }
+            }
         });
     }
 
     async getCv(id: number): Promise<Cv> {
         const cv = await this.cvRepository.findOne({
             where: { id },
-            relations: this.relations
+            relations: this.relations,
+            order: {
+                works_experiences: {
+                    id: 'DESC'
+                }
+            }
         });
         if (!cv) {
             throw new NotFoundException(`CV con ID ${id} no encontrado`);
@@ -265,6 +281,76 @@ export class CvService {
     }
 
     async getPdf(id: number) {
+        try {
+            const cv = await this.getCv(id);
+
+            // Registrar helpers de Handlebars
+            Handlebars.registerHelper('breaklines', function (text: string) {
+                // text = Handlebars.Utils.escapeExpression(text);
+                text = text.replace(/([\r\n])/g, '<br>').trim();
+                // return new Handlebars.SafeString(text);
+                return text
+            });
+
+            Handlebars.registerHelper('monthYear', function (date) {
+                const months = [
+                    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                ];
+                const d = new Date(date);
+                return `${months[d.getMonth()]} ${d.getFullYear()}`;
+            });
+
+            const htmlTemplate = await readFile('src/templates/cv_template.html', 'utf-8');
+
+            type langsType = Record<string, Record<string, string>>;
+            const langs: langsType = {
+                'esp': {
+                    'section_skills_title': 'HABILIDADES',
+                    'section_works_experiences_title': 'EXPERIENCIA PROFESIONAL',
+                    'section_studies_title': 'EDUCACIÓN',
+                    'section_studies_note': 'Nota',
+                    'current': 'Presente',
+                    'achievements': 'Logros',
+                },
+                'eng': {
+                    'section_skills_title': 'SKILLS',
+                    'section_works_experiences_title': 'WORK EXPERIENCE',
+                    'section_studies_title': 'EDUCATION',
+                    'section_studies_note': 'Note',
+                    'current': 'Present',
+                    'achievements': 'Achievements',
+                },
+            }
+
+            const lang = langs[cv.language] ? langs[cv.language] : langs['esp'];
+
+            // Compilar el HTML con Handlebars
+            const template = Handlebars.compile(htmlTemplate);
+            const htmlContent = template({
+                cv,
+                contact: cv.contact,
+                experiences: cv.works_experiences.sort((a, b) => a.id - b.id),
+                skills: cv.skills,
+                studies: cv.studies.sort((a, b) => a.id - b.id),
+                languages: cv.languages,
+                lang
+            });
+
+            const browser = await puppeteer.launch();
+            const page = await browser.newPage();
+            await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+            const pdfBuffer = await page.pdf({
+                format: 'A4',
+                printBackground: true,
+                // margin: { top: '1cm', right: '1cm', bottom: '1cm', left: '1cm' }
+            });
+            await browser.close();
+            return pdfBuffer;
+        } catch (error) {
+            throw new Error(`Error al generar PDF: ${error instanceof Error ? error.message : String(error)}`);
+        }
+
     }
 
     private async startTransaction(): Promise<QueryRunner> {
@@ -280,6 +366,14 @@ export class CvService {
         const cv = await queryRunner.manager.findOne(Cv, {
             where: { id },
             relations: this.relations,
+            order: {
+                works_experiences: {
+                    id: 'DESC'
+                },
+                studies: {
+                    id: 'ASC'
+                }
+            }
         });
 
         if (!cv) {

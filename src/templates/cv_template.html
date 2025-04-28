@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curriculum Vitae</title>
+    <style>
+        @page {
+            margin: 3rem;
+        }
+
+        body {
+            font-size: 11pt;
+        }
+
+        .text-sm {
+            font-size: 10pt;
+        }
+
+        .text-base {
+            font-size: 11pt;
+        }
+
+        .text-lg {
+            font-size: 13pt;
+        }
+
+        .text-xl {
+            font-size: 14pt;
+        }
+
+        .text-2xl {
+            font-size: 18pt;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-italic {
+            font-style: italic;
+        }
+
+        .sub-title {
+            width: 100%;
+            border-bottom: 2px solid #ADADAD;
+        }
+
+        .subsub-title {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .empresa {
+            margin-bottom: 1.5rem;
+        }
+
+        .empresa-header {
+            padding-bottom: .35rem;
+        }
+
+        .empresa-name {
+            font-weight: bold;
+        }
+
+        .empresa-content {
+            padding-top: .35rem;
+            padding-bottom: .35rem;
+        }
+
+        .empresa-logros {
+            margin: 0 2rem;
+        }
+
+        .empresa-logro-description {
+            margin: 0;
+        }
+
+        ul {
+            margin: .5rem 0;
+            padding-left: 2rem;
+        }
+
+        ul li {
+            padding: .15rem .05rem;
+            text-align: left;
+        }
+
+        .section-content-skills {
+            display: grid;
+            place-items: left;
+            grid-template-columns: repeat(3, 1fr);
+            padding: .25rem .75rem;
+        }
+
+        .section-content-skills li {
+            padding: .15rem .75rem;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .mb-1 {
+            margin-bottom: .25rem;
+        }
+
+        .mb-2 {
+            margin-bottom: .5rem;
+        }
+
+        .mb-3 {
+            margin-bottom: 1rem;
+        }
+
+        .font-bold {
+            font-weight: bold;
+        }
+
+        .text-uppercase {
+            text-transform: uppercase;
+        }
+
+        .text-nowrap {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+
+<body>
+    <main class="">
+        <header class="text-center">
+            <h1 class="text-2xl text-uppercase">{{contact.name}} {{contact.last_name}}</h1>
+            <p class="text-base text-nowrap">
+                {{contact.city}}, {{contact.country}} <b>|</b>
+                {{contact.phone}} <b>|</b>
+                {{contact.email}} <b>|</b>
+                {{contact.linkedin}}
+            </p>
+        </header>
+
+        <section>
+            <p class="text-sm text-italic">
+                {{{breaklines cv.resume}}}
+            </p>
+        </section>
+
+        <section>
+            <h3 class="text-xl sub-title">{{lang.section_skills_title}}</h3>
+
+            <ul class="text-base section-content-skills">
+                {{#each skills}}
+                <li>{{this.name}}</li>
+                {{/each}}
+            </ul>
+        </section>
+
+        <section>
+            <h3 class="text-xl sub-title">{{lang.section_works_experiences_title}}</h3>
+
+            {{#each experiences}}
+            <div class="empresa">
+                <div class="empresa-header">
+                    <div class="subsub-title mb-1">
+                        <div class="text-lg font-bold">{{this.company}}</div>
+                        <div class="text-lg font-bold">{{this.city}}, {{this.country}}</div>
+                    </div>
+                    <div class="subsub-title">
+                        <div class="">{{this.position}}</div>
+                        <div>
+                            {{monthYear this.start_date}} –
+                            {{#if this.current}}
+                            {{../lang.current}}
+                            {{else}}
+                            {{monthYear this.end_date}}
+                            {{/if}}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="empresa-content">
+                    {{{this.description}}}
+                </div>
+
+                {{#if this.achievements}}
+                <div class="empresa-logros">
+                    <h4 class="text-lg empresa-logro-description">{{../lang.achievements}}:</h4>
+                    <ul>
+                        {{#each this.achievements}}
+                        <li>{{this.description}}</li>
+                        {{/each}}
+                    </ul>
+                </div>
+                {{/if}}
+            </div>
+            {{/each}}
+        </section>
+
+        <section>
+            <h3 class="text-xl sub-title">{{lang.section_studies_title}}</h3>
+            {{#each studies}}
+            <div class="mb-3">
+                <div class="subsub-title">
+                    <div class="text-base font-bold text-uppercase">{{this.center_study}}</div>
+                    <div class="text-base font-bold">{{this.city}}, {{this.country}}</div>
+                </div>
+                <div class="subsub-title">
+                    <div class="">{{this.title}}</div>
+                    <div>{{monthYear this.start_date}} - {{monthYear this.end_date}}</div>
+                </div>
+                {{#if this.description}}
+                <div>{{lang.section_studies_note}}: {{this.description}}</div>
+                {{/if}}
+            </div>
+            {{/each}}
+        </section>
+    </main>
+</body>
+</html>
