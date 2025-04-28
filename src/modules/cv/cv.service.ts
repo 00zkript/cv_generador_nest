@@ -331,7 +331,7 @@ export class CvService {
                 cv,
                 contact: cv.contact,
                 experiences: cv.works_experiences.sort((a, b) => a.id - b.id),
-                skills: cv.skills,
+                skills: cv.skills.sort((a, b) => a.name.localeCompare(b.name)),
                 studies: cv.studies.sort((a, b) => a.id - b.id),
                 languages: cv.languages,
                 lang
