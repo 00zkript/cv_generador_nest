@@ -199,6 +199,12 @@ export class CvService {
 
         try {
             const cv = await this.findCvById(queryRunner, id);
+            await queryRunner.manager.remove(cv.works_experiences);
+            await queryRunner.manager.remove(cv.skills);
+            await queryRunner.manager.remove(cv.studies);
+            await queryRunner.manager.remove(cv.languages);
+            await queryRunner.manager.remove(cv.contact);
+
             await queryRunner.manager.remove(cv);
             await queryRunner.commitTransaction();
         } catch (error) {
