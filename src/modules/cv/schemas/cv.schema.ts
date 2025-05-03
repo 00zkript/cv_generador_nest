@@ -4,63 +4,92 @@ import { z } from 'zod';
 // Esquema para el CV básico
 export const CvSchema = z.object({
     id: z.number().optional(),
-    title: z.string().describe('Título del CV'),
-    description: z.string().describe('Descripción del CV'),
-    status: z.boolean().default(true).describe('Estado del CV')
+    name: z.string().describe('Nombre del CV'),
+    subject: z.string().describe('Asunto del CV'),
+    version: z.string().default('1.0.0').describe('Versión del CV'),
+    resume: z.string().describe('Resumen del CV'),
+    language: z.string().default('esp').describe('Idioma del CV'),
+    status: z.boolean().default(true).describe('Estado del CV').optional(),
+    // created_at: z.string().datetime().optional(),
+    // updated_at: z.string().datetime().optional(),
 }).required();
 
 // Esquema para el contacto
 export const ContactSchema = z.object({
     id: z.number().optional(),
-    name: z.string().describe('Nombre completo'),
-    email: z.string().email().describe('Correo electrónico'),
+    // cv_id: z.number().optional(),
+    name: z.string().describe('Nombres'),
+    last_name: z.string().describe('Apellidos'),
     phone: z.string().describe('Número de teléfono'),
-    address: z.string().describe('Dirección'),
-    linkedin: z.string().optional().describe('Perfil de LinkedIn'),
-    github: z.string().optional().describe('Perfil de GitHub')
+    email: z.string().email().optional().describe('Correo electrónico'),
+    linkedin: z.string().describe('Perfil de LinkedIn'),
+    github: z.string().describe('Perfil de GitHub'),
+    portafolio: z.string().describe('Perfil de Portafolio'),
+    city: z.string().describe('Ciudad'),
+    country: z.string().describe('País'),
+    status: z.boolean().default(true).describe('Estado del contacto').optional(),
+    // created_at: z.string().datetime().optional(),
+    // updated_at: z.string().datetime().optional(),
 }).required();
 
 // Esquema para logros
 export const AchievementSchema = z.object({
     id: z.number().optional(),
-    description: z.string().describe('Descripción del logro')
+    work_experience_id: z.number().optional(),
+    description: z.string().describe('Descripción del logro'),
+    status: z.boolean().default(true).describe('Estado del logro').optional(),
 }).required();
 
 // Esquema para experiencia laboral
 export const WorkExperienceSchema = z.object({
     id: z.number().optional(),
+    // cv_id: z.number().optional(),
+    name: z.string().describe('Nombre del trabajo'),
     company: z.string().describe('Nombre de la empresa'),
-    position: z.string().describe('Cargo o posición'),
+    position: z.string().describe('Cargo'),
     start_date: z.string().describe('Fecha de inicio'),
     end_date: z.string().optional().describe('Fecha de finalización'),
-    current: z.boolean().default(false).describe('Trabajo actual'),
+    current: z.boolean().default(false).describe('En curso'),
     description: z.string().describe('Descripción del trabajo'),
+    city: z.string().describe('Ciudad'),
+    country: z.string().describe('País'),
+    status: z.boolean().default(true).describe('Estado del trabajo').optional(),
     achievements: z.array(AchievementSchema.omit({ id: true })).describe('Logros en el trabajo')
 }).required();
 
 // Esquema para habilidades
 export const SkillSchema = z.object({
     id: z.number().optional(),
+    // cv_id: z.number().optional(),
     name: z.string().describe('Nombre de la habilidad'),
-    level: z.number().min(1).max(5).describe('Nivel de la habilidad (1-5)')
+    time_level: z.string().describe('Nivel de tiempo'),
+    description: z.string().describe('Descripción de la habilidad'),
+    status: z.boolean().default(true).describe('Estado de la habilidad').optional(),
 }).required();
 
 // Esquema para estudios
 export const StudySchema = z.object({
     id: z.number().optional(),
-    institution: z.string().describe('Nombre de la institución'),
-    degree: z.string().describe('Título obtenido'),
-    field: z.string().describe('Campo de estudio'),
+    // cv_id: z.number().optional(),
+    center_study: z.string().describe('Centro de estudio'),
+    title: z.string().describe('Título del estudio'),
     start_date: z.string().describe('Fecha de inicio'),
     end_date: z.string().optional().describe('Fecha de finalización'),
-    current: z.boolean().default(false).describe('En curso')
+    description: z.string().describe('Descripción del estudio'),
+    city: z.string().describe('Ciudad'),
+    country: z.string().describe('País'),
+    current: z.boolean().default(false).describe('En curso'),
+    status: z.boolean().default(true).describe('Estado del estudio').optional(),
 }).required();
 
 // Esquema para idiomas
 export const LanguageSchema = z.object({
     id: z.number().optional(),
+    // cv_id: z.number().optional(),
     name: z.string().describe('Nombre del idioma'),
-    level: z.string().describe('Nivel del idioma')
+    nivel: z.string().describe('Nivel del idioma'),
+    description: z.string().describe('Descripción del idioma'),
+    status: z.boolean().default(true).describe('Estado del idioma').optional(),
 }).required();
 
 // Esquema completo para CV con detalles

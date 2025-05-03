@@ -40,11 +40,6 @@ export class CvService {
         return this.cvRepository.find({
             where: { status: true },
             relations: this.relations,
-            order: {
-                works_experiences: {
-                    id: 'DESC'
-                }
-            }
         });
     }
 
@@ -55,6 +50,9 @@ export class CvService {
             order: {
                 works_experiences: {
                     id: 'DESC'
+                },
+                studies: {
+                    id: 'ASC'
                 }
             }
         });
@@ -130,14 +128,25 @@ export class CvService {
 
 
             if (request.contact) {
-                existingCv.contact = existingCv.contact
-                    ? queryRunner.manager.merge(Contact, existingCv.contact, request.contact)
-                    : queryRunner.manager.create(Contact, request.contact);
+                if (existingCv.contact) {
+                    // Actualizar contacto existente preservando id y fechas
+                    Object.assign(existingCv.contact, {
+                        ...request.contact,
+                        created_at: existingCv.contact.created_at,
+                        updated_at: new Date(),
+                    });
+                } else {
+                    // Crear nuevo contacto
+                    existingCv.contact = queryRunner.manager.create(Contact, {
+                        ...request.contact
+                    });
+                }
             }
 
             if (request.works_experiences?.length) {
+                await queryRunner.manager.remove(existingCv.works_experiences);
                 existingCv.works_experiences = request.works_experiences.map(workExpDto => {
-                    const workExperience = queryRunner.manager.create(WorkExperience, workExpDto);
+                    const workExperience = queryRunner.manager.create(WorkExperience, { ...workExpDto });
 
                     if (workExpDto.achievements) {
                         workExperience.achievements = workExpDto.achievements.map(achievementDto =>
@@ -150,20 +159,23 @@ export class CvService {
             }
 
             if (request.skills?.length) {
+                await queryRunner.manager.remove(existingCv.skills);
                 existingCv.skills = request.skills.map(skill =>
-                    queryRunner.manager.create(Skill, skill)
+                    queryRunner.manager.create(Skill, { ...skill })
                 );
             }
 
             if (request.studies?.length) {
+                await queryRunner.manager.remove(existingCv.studies);
                 existingCv.studies = request.studies.map(study =>
-                    queryRunner.manager.create(Study, study)
+                    queryRunner.manager.create(Study, { ...study })
                 );
             }
 
             if (request.languages?.length) {
+                await queryRunner.manager.remove(existingCv.languages);
                 existingCv.languages = request.languages.map(language =>
-                    queryRunner.manager.create(Language, language)
+                    queryRunner.manager.create(Language, { ...language })
                 );
             }
 
@@ -366,14 +378,6 @@ export class CvService {
         const cv = await queryRunner.manager.findOne(Cv, {
             where: { id },
             relations: this.relations,
-            order: {
-                works_experiences: {
-                    id: 'DESC'
-                },
-                studies: {
-                    id: 'ASC'
-                }
-            }
         });
 
         if (!cv) {
