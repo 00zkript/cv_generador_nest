@@ -59,6 +59,11 @@ export class CvService {
         if (!cv) {
             throw new NotFoundException(`CV con ID ${id} no encontrado`);
         }
+
+        cv.works_experiences.sort((a, b) => a.id - b.id);
+        cv.skills.sort((a, b) => a.name.localeCompare(b.name));
+        cv.studies.sort((a, b) => a.id - b.id);
+
         return cv;
     }
 
