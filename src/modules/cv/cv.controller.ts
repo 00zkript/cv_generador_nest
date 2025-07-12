@@ -1,10 +1,13 @@
 import { ZodValidationPipe } from "@anatine/zod-nestjs";
-import { Body, Controller, Delete, Get, Param, Post, Put, Res, UsePipes } from "@nestjs/common";
-import { ApiAcceptedResponse, ApiBadRequestResponse, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res, UsePipes } from "@nestjs/common";
+import { ApiAcceptedResponse, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CvService } from "./cv.service";
-import { CvDto, RequestCvDto } from "./schemas/cv.schema";
 import { Response } from "express";
 import { Readable } from "stream";
+import { CreateCvDto } from "./dto/create-cv.dto";
+import { UpdateCvDto } from "./dto/update-cv.dto";
+import { ResponseCvDto } from "./dto/response-cv.dto";
+import { PaginateCvDto } from "./dto/paginate-cv.dto";
 
 @ApiTags('cvs')
 @Controller('cvs')
@@ -15,76 +18,58 @@ export class CvController {
         private readonly cvService: CvService
     ) { }
 
-    @Get()
     @ApiOperation({ summary: 'Obtener todos los cvs' })
-    @ApiOkResponse({
-        description: 'Retorna todos los cvs',
-        type: [CvDto]
-    })
-    @ApiBadRequestResponse({
-        description: 'Error al obtener los cvs',
-        type: Error
-    })
+    @ApiOkResponse({ type: [ResponseCvDto] })
+    @Get()
     index() {
-        return this.cvService.getCvs();
+        return this.cvService.getAll();
     }
 
-    @Get(':id')
+
+    @ApiOperation({ summary: 'Obtener todos los cvs' })
+    @ApiOkResponse({ type: [PaginateCvDto] })
+    @Get('paginate')
+    paginate(@Query('page') page: number, @Query('per_page') perPage: number) {
+        return this.cvService.paginate(+page, +perPage);
+    }
+
     @ApiOperation({ summary: 'Obtener un cv' })
-    @ApiOkResponse({
-        description: 'Retorna un cv',
-        type: CvDto
-    })
-    @ApiBadRequestResponse({
-        description: 'Error al obtener el cv',
-        type: Error
-    })
+    @ApiOkResponse({ type: ResponseCvDto })
+    @Get(':id')
     show(@Param('id') id: number) {
-        return this.cvService.getCv(id);
+        return this.cvService.find(id);
     }
 
-    @Post()
     @ApiOperation({ summary: 'Crear un cv' })
-    @ApiCreatedResponse({
-        description: 'Cv creado',
-        type: CvDto
-    })
-    store(@Body() data: RequestCvDto) {
-        return this.cvService.storeCv(data);
+    @ApiCreatedResponse({ type: ResponseCvDto })
+    @Post()
+    store(@Body() data: CreateCvDto) {
+        return this.cvService.store(data);
     }
 
-    @Put(':id')
     @ApiOperation({ summary: 'Actualizar un cv' })
-    @ApiAcceptedResponse({
-        description: 'Cv actualizado',
-        type: CvDto
-    })
-    update(@Param('id') id: number, @Body() data: RequestCvDto) {
-        return this.cvService.updateCv(id, data);
+    @ApiAcceptedResponse({ type: ResponseCvDto })
+    @Put(':id')
+    update(@Param('id') id: number, @Body() data: UpdateCvDto) {
+        return this.cvService.update(id, data);
     }
 
-    @Delete(':id')
     @ApiOperation({ summary: 'Eliminar un cv' })
-    @ApiOkResponse({
-        description: 'Cv eliminado',
-        type: CvDto
-    })
+    @ApiOkResponse({ type: ResponseCvDto })
+    @Delete(':id')
     destroy(@Param('id') id: number) {
-        return this.cvService.deleteCv(id);
+        return this.cvService.delete(id);
     }
 
-    @Post(':id/duplicate')
     @ApiOperation({ summary: 'Duplicar un cv' })
-    @ApiCreatedResponse({
-        description: 'Cv duplicado',
-        type: CvDto
-    })
+    @ApiCreatedResponse({ type: ResponseCvDto })
+    @Post(':id/duplicate')
     duplicate(@Param('id') id: number) {
-        return this.cvService.duplicateCv(id);
+        return this.cvService.duplicate(id);
     }
 
-    @Get(':id/pdf')
     @ApiOperation({ summary: 'Obtener el pdf de un cv' })
+    @Get(':id/pdf')
     async pdf(@Param('id') id: number, @Res() res: Response) {
         const pdfBuffer = await this.cvService.getPdf(id);
 

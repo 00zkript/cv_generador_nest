@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject, UsePipes, Body } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { Repository, DataSource, QueryRunner } from 'typeorm';
 import { Cv } from './entity/cv.entity';
 import { Contact } from './entity/contact.entity';
@@ -7,17 +7,15 @@ import { Achievement } from './entity/achievement.entity';
 import { Skill } from './entity/skill.entity';
 import { Study } from './entity/study.entity';
 import { Language } from './entity/language.entity';
-import { RequestCvDto } from './schemas/cv.schema';
-import { ZodValidationPipe } from '@anatine/zod-nestjs';
+import { CreateCvDto } from "./dto/create-cv.dto";
+import { UpdateCvDto } from "./dto/update-cv.dto";
 import * as puppeteer from 'puppeteer';
 import * as Handlebars from 'handlebars';
 import { readFile } from 'fs/promises';
-
-
+import { PaginateCvDto } from './dto/paginate-cv.dto';
 
 
 @Injectable()
-@UsePipes(ZodValidationPipe)
 export class CvService {
     private readonly relations = [
         'contact',
@@ -36,26 +34,52 @@ export class CvService {
 
     ) { }
 
-    async getCvs(): Promise<Cv[]> {
+    async getAll(): Promise<Cv[]> {
         return this.cvRepository.find({
             where: { status: true },
-            relations: this.relations,
         });
     }
 
-    async getCv(id: number): Promise<Cv> {
+    async paginate(page: number = 1, limit: number = 10): Promise<PaginateCvDto> {
+        const skip = (page - 1) * limit;
+
+        const [cvs, total] = await this.cvRepository.findAndCount({
+            select: [
+                'id',
+                'name',
+                'subject',
+                'version',
+                'language',
+                'status',
+                'created_at',
+                'updated_at',
+            ],
+            skip,
+            take: limit,
+            order: {
+                id: 'DESC',
+            },
+            // relations: this.relations
+        });
+
+        return {
+            total,
+            per_page: limit,
+            current_page: page,
+            last_page: Math.ceil(total / limit),
+            from: page,
+            to: page + 1,
+            data: cvs,
+        };
+
+    }
+
+    async find(id: number): Promise<Cv> {
         const cv = await this.cvRepository.findOne({
             where: { id },
             relations: this.relations,
-            order: {
-                works_experiences: {
-                    id: 'DESC'
-                },
-                studies: {
-                    id: 'ASC'
-                }
-            }
         });
+
         if (!cv) {
             throw new NotFoundException(`CV con ID ${id} no encontrado`);
         }
@@ -67,7 +91,7 @@ export class CvService {
         return cv;
     }
 
-    async storeCv(request: RequestCvDto): Promise<Cv> {
+    async store(request: CreateCvDto): Promise<Cv> {
         const queryRunner = await this.startTransaction();
         try {
 
@@ -123,7 +147,7 @@ export class CvService {
         }
     }
 
-    async updateCv(id: number, request: RequestCvDto): Promise<Cv> {
+    async update(id: number, request: UpdateCvDto): Promise<Cv> {
         const queryRunner = await this.startTransaction();
 
         try {
@@ -199,7 +223,7 @@ export class CvService {
         }
     }
 
-    async deleteCv(id: number): Promise<void> {
+    async delete(id: number): Promise<void> {
         const queryRunner = await this.startTransaction();
 
         try {
@@ -220,7 +244,7 @@ export class CvService {
         }
     }
 
-    async duplicateCv(id: number): Promise<Cv> {
+    async duplicate(id: number): Promise<Cv> {
         const queryRunner = await this.startTransaction();
 
         try {
@@ -305,7 +329,7 @@ export class CvService {
 
     async getPdf(id: number) {
         try {
-            const cv = await this.getCv(id);
+            const cv = await this.find(id);
 
             // Registrar helpers de Handlebars
             Handlebars.registerHelper('breaklines', function (text: string) {
