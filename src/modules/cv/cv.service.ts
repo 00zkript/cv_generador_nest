@@ -62,13 +62,14 @@ export class CvService {
             // relations: this.relations
         });
 
+        const totalPage = Math.ceil(total / limit);
+
         return {
             total,
             per_page: limit,
             current_page: page,
-            last_page: Math.ceil(total / limit),
-            from: page,
-            to: page + 1,
+            last_page: totalPage,
+            total_pages: totalPage,
             data: cvs,
         };
 

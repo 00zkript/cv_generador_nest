@@ -17,10 +17,13 @@ export class PaginateCvDto {
     last_page: number
 
     @ApiProperty()
-    from: number
+    total_pages: number
 
-    @ApiProperty()
-    to: number
+    // @ApiProperty()
+    // from: number
+
+    // @ApiProperty()
+    // to: number
 
     @ApiProperty({ type: () => CvDto, isArray: true })
     data: CvDto[]
