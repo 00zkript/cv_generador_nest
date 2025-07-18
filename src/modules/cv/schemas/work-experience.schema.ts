@@ -13,8 +13,9 @@ export const WorkExperienceSchema = z.object({
     description: z.string().describe('Descripción del trabajo'),
     city: z.string().describe('Ciudad'),
     country: z.string().describe('País'),
+    achievements: z.string().describe('Descripción de los logros').optional(),
     status: z.boolean().default(true).describe('Estado del trabajo').optional(),
-    achievements: z.array(AchievementSchema.omit({ id: true })).describe('Logros en el trabajo')
+    // achievements: z.array(AchievementSchema.omit({ id: true })).describe('Logros en el trabajo')
 }).required();
 
 export type WorkExperience = z.infer<typeof WorkExperienceSchema>;

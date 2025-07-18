@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn, Relation } from 'typeorm';
 import { Cv } from './cv.entity';
-import { Achievement } from './achievement.entity';
+// import { Achievement } from './achievement.entity';
 
 @Entity('works_experiences')
 export class WorkExperience {
@@ -37,6 +37,9 @@ export class WorkExperience {
     @Column({ length: 250 })
     country: string;
 
+    @Column({ name: 'achievements', type: 'text', nullable: true })
+    achievements: string;
+
     @Column({ default: true })
     status: boolean;
 
@@ -50,6 +53,6 @@ export class WorkExperience {
     @JoinColumn({ name: 'cv_id' })
     cv: Cv;
 
-    @OneToMany(() => Achievement, achievement => achievement.work_experience, { cascade: true })
-    achievements: Relation<Achievement[]>;
+    // @OneToMany(() => Achievement, achievement => achievement.work_experience, { cascade: true })
+    // achievements: Relation<Achievement[]>;
 }

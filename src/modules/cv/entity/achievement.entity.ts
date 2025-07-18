@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, Relation } from 'typeorm';
-import { WorkExperience } from './work-experience.entity';
+// import { WorkExperience } from './work-experience.entity';
 
 @Entity('achievements')
 export class Achievement {
@@ -21,7 +21,7 @@ export class Achievement {
     @UpdateDateColumn()
     updated_at: Date;
 
-    @ManyToOne(() => WorkExperience, (workExperience) => workExperience.achievements, { onDelete: 'SET NULL' })
-    @JoinColumn({ name: 'work_experience_id' })
-    work_experience: Relation<WorkExperience>;
+    // @ManyToOne(() => WorkExperience, (workExperience) => workExperience.achievements, { onDelete: 'SET NULL' })
+    // @JoinColumn({ name: 'work_experience_id' })
+    // work_experience: Relation<WorkExperience>;
 }

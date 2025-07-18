@@ -37,7 +37,12 @@ export class CvController {
     @ApiOkResponse({ type: ResponseCvDto })
     @Get(':id')
     show(@Param('id') id: number) {
-        return this.cvService.find(id);
+        try {
+
+            return this.cvService.find(+id);
+        }catch (error) {
+            console.error('Error in show method:', error);
+        }
     }
 
     @ApiOperation({ summary: 'Crear un cv' })

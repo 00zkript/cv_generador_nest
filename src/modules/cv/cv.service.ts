@@ -23,7 +23,6 @@ export class CvService {
         'studies',
         'languages',
         'works_experiences',
-        'works_experiences.achievements'
     ];
 
     constructor(
@@ -103,15 +102,9 @@ export class CvService {
             }
 
             if (request.works_experiences?.length) {
-                cv.works_experiences = request.works_experiences.map(workExperience => {
-                    const work = queryRunner.manager.create(WorkExperience, {
-                        ...workExperience,
-                        achievements: workExperience.achievements?.map(achievement =>
-                            queryRunner.manager.create(Achievement, achievement)
-                        ) || []
-                    });
-                    return work;
-                });
+                cv.works_experiences = request.works_experiences.map((workExpDto) =>
+                    queryRunner.manager.create(WorkExperience, workExpDto)
+                );
             }
 
             if (request.skills?.length) {
@@ -175,17 +168,9 @@ export class CvService {
 
             if (request.works_experiences?.length) {
                 await queryRunner.manager.remove(existingCv.works_experiences);
-                existingCv.works_experiences = request.works_experiences.map(workExpDto => {
-                    const workExperience = queryRunner.manager.create(WorkExperience, { ...workExpDto });
-
-                    if (workExpDto.achievements) {
-                        workExperience.achievements = workExpDto.achievements.map(achievementDto =>
-                            queryRunner.manager.create(Achievement, achievementDto)
-                        );
-                    }
-
-                    return workExperience;
-                });
+                existingCv.works_experiences = request.works_experiences.map(workExpDto => 
+                    queryRunner.manager.create(WorkExperience, { ...workExpDto })
+                );
             }
 
             if (request.skills?.length) {
@@ -265,23 +250,9 @@ export class CvService {
             }
 
             if (originalCv.works_experiences?.length) {
-                newCv.works_experiences = originalCv.works_experiences.map(workExperience => {
-                    const newWork = queryRunner.manager.create(WorkExperience, {
-                        ...workExperience,
-                        id: undefined,
-                    });
-
-                    if (workExperience.achievements?.length) {
-                        newWork.achievements = workExperience.achievements.map(achievement =>
-                            queryRunner.manager.create(Achievement, {
-                                ...achievement,
-                                id: undefined,
-                            })
-                        );
-                    }
-
-                    return newWork;
-                });
+                newCv.works_experiences = originalCv.works_experiences.map(workExperience => 
+                    queryRunner.manager.create(WorkExperience, {...workExperience})
+                );
             }
 
             if (originalCv.skills?.length) {
