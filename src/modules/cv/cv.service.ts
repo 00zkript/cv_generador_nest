@@ -90,7 +90,11 @@ export class CvService {
             return dateB - dateA;
         });
         cv.skills.sort((a, b) => a.name.localeCompare(b.name));
-        cv.studies.sort((a, b) => a.id - b.id);
+        cv.studies.sort((a, b) => {
+            const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+            const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+            return dateB - dateA;
+        });
 
         return cv;
     }
@@ -354,6 +358,12 @@ export class CvService {
                 return dateB - dateA;
             });
 
+            cv.studies.sort((a, b) => {
+                const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+                const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+                return dateB - dateA;
+            });
+
             
             // Compilar el HTML con Handlebars
             const template = Handlebars.compile(htmlTemplate);
@@ -362,7 +372,7 @@ export class CvService {
                 contact: cv.contact,
                 experiences: cv.works_experiences,
                 skills: cv.skills.sort((a, b) => a.name.localeCompare(b.name)),
-                studies: cv.studies.sort((a, b) => a.id - b.id),
+                studies: cv.studies,
                 languages: cv.languages,
                 lang
             });
