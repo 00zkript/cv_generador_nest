@@ -125,6 +125,10 @@
         .text-nowrap {
             white-space: nowrap;
         }
+
+        ul li p {
+            margin: 0;
+        }
     </style>
 </head>
 
@@ -186,11 +190,7 @@
                 {{#if this.achievements}}
                 <div class="empresa-logros">
                     <h4 class="text-lg empresa-logro-description">{{../lang.achievements}}:</h4>
-                    <ul>
-                        {{#each this.achievements}}
-                            <li>{{{this.description}}}</li>
-                        {{/each}}
-                    </ul>
+                    {{{this.achievements}}}
                 </div>
                 {{/if}}
             </div>
