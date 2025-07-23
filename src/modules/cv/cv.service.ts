@@ -84,7 +84,11 @@ export class CvService {
             throw new NotFoundException(`CV con ID ${id} no encontrado`);
         }
 
-        cv.works_experiences.sort((a, b) => a.id - b.id);
+        cv.works_experiences.sort((a, b) => {
+            const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+            const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+            return dateB - dateA;
+        });
         cv.skills.sort((a, b) => a.name.localeCompare(b.name));
         cv.studies.sort((a, b) => a.id - b.id);
 
@@ -344,12 +348,19 @@ export class CvService {
 
             const lang = langs[cv.language] ? langs[cv.language] : langs['esp'];
 
+            cv.works_experiences.sort((a, b) => {
+                const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+                const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+                return dateB - dateA;
+            });
+
+            
             // Compilar el HTML con Handlebars
             const template = Handlebars.compile(htmlTemplate);
             const htmlContent = template({
                 cv,
                 contact: cv.contact,
-                experiences: cv.works_experiences.sort((a, b) => a.id - b.id),
+                experiences: cv.works_experiences,
                 skills: cv.skills.sort((a, b) => a.name.localeCompare(b.name)),
                 studies: cv.studies.sort((a, b) => a.id - b.id),
                 languages: cv.languages,
