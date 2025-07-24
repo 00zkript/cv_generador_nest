@@ -177,28 +177,34 @@ export class CvService {
             if (request.works_experiences?.length) {
                 await queryRunner.manager.remove(existingCv.works_experiences);
                 existingCv.works_experiences = request.works_experiences.map(workExpDto => 
-                    queryRunner.manager.create(WorkExperience, { ...workExpDto })
+                    queryRunner.manager.create(WorkExperience, workExpDto)
                 );
             }
 
             if (request.skills?.length) {
                 await queryRunner.manager.remove(existingCv.skills);
-                existingCv.skills = request.skills.map(skill =>
-                    queryRunner.manager.create(Skill, { ...skill })
-                );
+                
+                const newSkills: Skill[] = [];
+                for (const skillData of request.skills) {
+                    const skill = queryRunner.manager.create(Skill, { ...skillData, });
+                    const savedSkill = await queryRunner.manager.save(Skill, skill);
+                    newSkills.push(savedSkill);
+                }
+            
+                existingCv.skills = newSkills;
             }
 
             if (request.studies?.length) {
                 await queryRunner.manager.remove(existingCv.studies);
                 existingCv.studies = request.studies.map(study =>
-                    queryRunner.manager.create(Study, { ...study })
+                    queryRunner.manager.create(Study, study)
                 );
             }
 
             if (request.languages?.length) {
                 await queryRunner.manager.remove(existingCv.languages);
                 existingCv.languages = request.languages.map(language =>
-                    queryRunner.manager.create(Language, { ...language })
+                    queryRunner.manager.create(Language, language)
                 );
             }
 
