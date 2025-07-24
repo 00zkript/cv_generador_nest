@@ -19,11 +19,11 @@ export class WorkExperience {
     @Column({ length: 250 })
     position: string;
 
-    @Column()
-    start_date: Date;
+    @Column({ type: 'date' })
+    start_date: string;
 
-    @Column()
-    end_date: Date;
+    @Column({ type: 'date' })
+    end_date: string;
 
     @Column({ default: false })
     current: boolean;

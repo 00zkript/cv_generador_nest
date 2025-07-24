@@ -15,11 +15,11 @@ export class Study {
     @Column({ length: 250 })
     title: string;
 
-    @Column()
-    start_date: Date;
+    @Column({ type: 'date' })
+    start_date: string;
 
-    @Column()
-    end_date: Date;
+    @Column({ type: 'date' })
+    end_date: string;
 
     @Column()
     description: string;
