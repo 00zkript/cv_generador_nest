@@ -176,9 +176,13 @@ export class CvService {
 
             if (request.works_experiences?.length) {
                 await queryRunner.manager.remove(existingCv.works_experiences);
-                existingCv.works_experiences = request.works_experiences.map(workExpDto => 
-                    queryRunner.manager.create(WorkExperience, workExpDto)
-                );
+                const newWorksExperiences: WorkExperience[] = [];
+                for (const workExpDto of request.works_experiences) {
+                    const workExp = queryRunner.manager.create(WorkExperience, workExpDto);
+                    const savedWorkExp = await queryRunner.manager.save(WorkExperience, workExp);
+                    newWorksExperiences.push(savedWorkExp);
+                }
+                existingCv.works_experiences = newWorksExperiences;
             }
 
             if (request.skills?.length) {
@@ -196,16 +200,24 @@ export class CvService {
 
             if (request.studies?.length) {
                 await queryRunner.manager.remove(existingCv.studies);
-                existingCv.studies = request.studies.map(study =>
-                    queryRunner.manager.create(Study, study)
-                );
+                const newStudies: Study[] = [];
+                for (const studyData of request.studies) {
+                    const study = queryRunner.manager.create(Study, studyData);
+                    const savedStudy = await queryRunner.manager.save(Study, study);
+                    newStudies.push(savedStudy);
+                }
+                existingCv.studies = newStudies;
             }
 
             if (request.languages?.length) {
                 await queryRunner.manager.remove(existingCv.languages);
-                existingCv.languages = request.languages.map(language =>
-                    queryRunner.manager.create(Language, language)
-                );
+                const newLanguages: Language[] = [];
+                for (const languageData of request.languages) {
+                    const language = queryRunner.manager.create(Language, languageData);
+                    const savedLanguage = await queryRunner.manager.save(Language, language);
+                    newLanguages.push(savedLanguage);
+                }
+                existingCv.languages = newLanguages;
             }
 
             const updatedCv = await queryRunner.manager.save(Cv, existingCv);
