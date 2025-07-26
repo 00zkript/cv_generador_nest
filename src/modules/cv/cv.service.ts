@@ -13,6 +13,7 @@ import * as puppeteer from 'puppeteer';
 import * as Handlebars from 'handlebars';
 import { readFile } from 'fs/promises';
 import { PaginateCvDto } from './dto/paginate-cv.dto';
+import * as dayjs from 'dayjs';
 
 
 @Injectable()
@@ -327,27 +328,6 @@ export class CvService {
 
     async getPdf(id: number) {
         try {
-            const cv = await this.find(id);
-
-            // Registrar helpers de Handlebars
-            Handlebars.registerHelper('breaklines', function (text: string) {
-                // text = Handlebars.Utils.escapeExpression(text);
-                text = text.replace(/([\r\n])/g, '<br>').trim();
-                // return new Handlebars.SafeString(text);
-                return text
-            });
-
-            Handlebars.registerHelper('monthYear', function (date) {
-                const months = [
-                    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-                ];
-                const d = new Date(date);
-                return `${months[d.getMonth()]} ${d.getFullYear()}`;
-            });
-
-            const htmlTemplate = await readFile('src/templates/cv_template.html', 'utf-8');
-
             type langsType = Record<string, Record<string, string>>;
             const langs: langsType = {
                 'esp': {
@@ -368,7 +348,33 @@ export class CvService {
                 },
             }
 
+            const cv = await this.find(id);
             const lang = langs[cv.language] ? langs[cv.language] : langs['esp'];
+
+            // Registrar helpers de Handlebars
+            Handlebars.registerHelper('breaklines', function (text: string) {
+                // text = Handlebars.Utils.escapeExpression(text);
+                text = text.replace(/([\r\n])/g, '<br>').trim();
+                // return new Handlebars.SafeString(text);
+                return text
+            });
+
+            Handlebars.registerHelper('monthYear', function (date) {
+                const d = dayjs(date);
+
+                if (cv.language === 'eng') {
+                    return d.format('MMMM YYYY'); // → January 2020
+                }
+                const months = [
+                    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+                ];
+                
+                return `${months[d.month()]} ${d.year()}`;
+            });
+
+
+            const htmlTemplate = await readFile('src/templates/cv_template.html', 'utf-8');
 
             cv.works_experiences.sort((a, b) => {
                 const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
