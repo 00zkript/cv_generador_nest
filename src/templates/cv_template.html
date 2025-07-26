@@ -126,6 +126,10 @@
             white-space: nowrap;
         }
 
+        .text-justify {
+            text-align: justify;
+        }
+
         ul li p {
             margin: 0;
         }
@@ -145,8 +149,9 @@
         </header>
 
         <section>
-            <p class="text-sm">
-                {{{breaklines cv.resume}}}
+            <p class="text-sm text-justify">
+                <!-- {{{breaklines cv.resume}}} -->
+                {{{ cv.resume }}}
             </p>
         </section>
 
