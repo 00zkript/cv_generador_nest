@@ -22,6 +22,9 @@ export class Cv {
     @Column({ length: 250 })
     resume: string;
 
+    @Column({ nullable: true })
+    technical_contributions_projects: string;
+    
     @Column({ length: 20 })
     language: string;
 

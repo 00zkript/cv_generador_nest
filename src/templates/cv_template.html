@@ -202,6 +202,16 @@
             {{/each}}
         </section>
 
+        {{#if cv.technical_contributions_projects}}
+        <section>
+            <h3 class="text-xl sub-title">{{lang.section_technical_contributions_projects}}</h3>
+
+            <div class="mb-3">
+                <div>{{{ cv.technical_contributions_projects }}}</div>
+            </div>
+        </section>
+        {{/if}}
+
         <section>
             <h3 class="text-xl sub-title">{{lang.section_studies_title}}</h3>
             {{#each studies}}

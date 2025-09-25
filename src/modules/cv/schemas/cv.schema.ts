@@ -9,6 +9,7 @@ export const CvSchema = z.object({
     resume: z.string().describe('Resumen del CV'),
     language: z.string().default('esp').describe('Idioma del CV'),
     status: z.boolean().default(true).describe('Estado del CV').optional(),
+    technical_contributions_projects: z.string().optional().describe('Aportes y Proyectos Técnicos'),
     // created_at: z.string().datetime().optional(),
     // updated_at: z.string().datetime().optional(),
 }).required();
