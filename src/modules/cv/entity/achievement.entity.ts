@@ -4,22 +4,22 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 @Entity('achievements')
 export class Achievement {
     @PrimaryGeneratedColumn()
-    id: number;
+    id!: number;
 
     @Column({ nullable: true })
-    work_experience_id: number;
+    work_experience_id!: number;
 
     @Column()
-    description: string;
+    description!: string;
 
     @Column({ default: true })
-    status: boolean;
+    status!: boolean;
 
     @CreateDateColumn()
-    created_at: Date;
+    created_at!: Date;
 
     @UpdateDateColumn()
-    updated_at: Date;
+    updated_at!: Date;
 
     // @ManyToOne(() => WorkExperience, (workExperience) => workExperience.achievements, { onDelete: 'SET NULL' })
     // @JoinColumn({ name: 'work_experience_id' })

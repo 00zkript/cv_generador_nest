@@ -4,48 +4,48 @@ import { Cv } from './cv.entity';
 @Entity('contacts')
 export class Contact {
     @PrimaryGeneratedColumn()
-    id: number;
+    id!: number;
 
     @Column({ nullable: true })
-    cv_id: number;
+    cv_id!: number;
 
     @Column({ length: 250 })
-    name: string;
+    name!: string;
 
     @Column({ length: 250 })
-    last_name: string;
+    last_name!: string;
 
     @Column({ length: 250, nullable: true })
-    phone: string;
+    phone!: string;
 
     @Column({ length: 250, nullable: true })
-    email: string;
+    email!: string;
 
     @Column({ nullable: true })
-    linkedin: string;
+    linkedin!: string;
 
     @Column({ nullable: true })
-    github: string;
+    github!: string;
 
     @Column({ nullable: true })
-    portafolio: string;
+    portafolio!: string;
 
     @Column({ length: 250, nullable: true })
-    city: string;
+    city!: string;
 
     @Column({ length: 250, nullable: true })
-    country: string;
+    country!: string;
 
     @Column({ default: true })
-    status: boolean;
+    status!: boolean;
 
     @CreateDateColumn()
-    created_at: Date;
+    created_at!: Date;
 
     @UpdateDateColumn()
-    updated_at: Date;
+    updated_at!: Date;
 
     @OneToOne(() => Cv, cv => cv.contact, { onDelete: 'SET NULL' })
     @JoinColumn({ name: 'cv_id' })
-    cv: Cv;
+    cv!: Cv;
 }

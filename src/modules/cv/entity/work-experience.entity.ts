@@ -5,53 +5,53 @@ import { Cv } from './cv.entity';
 @Entity('works_experiences')
 export class WorkExperience {
     @PrimaryGeneratedColumn()
-    id: number;
+    id!: number;
 
     @Column()
-    cv_id: number;
+    cv_id!: number;
 
     @Column({ length: 250 })
-    name: string;
+    name!: string;
 
     @Column({ length: 250 })
-    company: string;
+    company!: string;
 
     @Column({ length: 250 })
-    position: string;
+    position!: string;
 
     @Column({ type: 'date' })
-    start_date: string;
+    start_date!: string;
 
     @Column({ type: 'date' })
-    end_date: string;
+    end_date!: string;
 
     @Column({ default: false })
-    current: boolean;
+    current!: boolean;
 
     @Column({ length: 250 })
-    description: string;
+    description!: string;
 
     @Column({ length: 250 })
-    city: string;
+    city!: string;
 
     @Column({ length: 250 })
-    country: string;
+    country!: string;
 
     @Column({ name: 'achievements', type: 'text', nullable: true })
-    achievements: string;
+    achievements!: string;
 
     @Column({ default: true })
-    status: boolean;
+    status!: boolean;
 
     @CreateDateColumn()
-    created_at: Date;
+    created_at!: Date;
 
     @UpdateDateColumn()
-    updated_at: Date;
+    updated_at!: Date;
 
     @ManyToOne(() => Cv, cv => cv.works_experiences)
     @JoinColumn({ name: 'cv_id' })
-    cv: Cv;
+    cv!: Cv;
 
     // @OneToMany(() => Achievement, achievement => achievement.work_experience, { cascade: true })
     // achievements: Relation<Achievement[]>;

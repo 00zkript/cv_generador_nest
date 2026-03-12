@@ -4,30 +4,30 @@ import { Cv } from './cv.entity';
 @Entity('skills')
 export class Skill {
     @PrimaryGeneratedColumn()
-    id: number;
+    id!: number;
 
     @Column()
-    cv_id: number;
+    cv_id!: number;
 
     @Column({ length: 250 })
-    name: string;
+    name!: string;
 
     @Column({ length: 250 })
-    time_level: string;
+    time_level!: string;
 
     @Column()
-    description: string;
+    description!: string;
 
     @Column({ default: true })
-    status: boolean;
+    status!: boolean;
 
     @CreateDateColumn()
-    created_at: Date;
+    created_at!: Date;
 
     @UpdateDateColumn()
-    updated_at: Date;
+    updated_at!: Date;
 
     @ManyToOne(() => Cv, cv => cv.skills)
     @JoinColumn({ name: 'cv_id' })
-    cv: Cv;
+    cv!: Cv;
 }

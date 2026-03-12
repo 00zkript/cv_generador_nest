@@ -8,47 +8,47 @@ import { WorkExperience } from './work-experience.entity';
 @Entity('cvs')
 export class Cv {
     @PrimaryGeneratedColumn()
-    id: number;
+    id!: number;
 
     @Column({ unique: true })
-    name: string;
+    name!: string;
 
     @Column()
-    subject: string;
+    subject!: string;
 
     @Column({ length: 250 })
-    version: string;
+    version!: string;
 
     @Column({ length: 250 })
-    resume: string;
+    resume!: string;
 
     @Column({ nullable: true })
-    technical_contributions_projects: string;
+    technical_contributions_projects!: string;
     
     @Column({ length: 20 })
-    language: string;
+    language!: string;
 
     @Column({ default: true })
-    status: boolean;
+    status!: boolean;
 
     @CreateDateColumn()
-    created_at: Date;
+    created_at!: Date;
 
     @UpdateDateColumn()
-    updated_at: Date;
+    updated_at!: Date;
 
     @OneToOne(() => Contact, contact => contact.cv, { cascade: true })
-    contact: Contact;
+    contact!: Contact;
 
     @OneToMany(() => Skill, skill => skill.cv, { cascade: true })
-    skills: Skill[];
+    skills!: Skill[];
 
     @OneToMany(() => Study, study => study.cv, { cascade: true })
-    studies: Study[];
+    studies!: Study[];
 
     @OneToMany(() => Language, language => language.cv, { cascade: true })
-    languages: Language[];
+    languages!: Language[];
 
     @OneToMany(() => WorkExperience, workExperience => workExperience.cv, { cascade: true })
-    works_experiences: WorkExperience[];
+    works_experiences!: WorkExperience[];
 }
