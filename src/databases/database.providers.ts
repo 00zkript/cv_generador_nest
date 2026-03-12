@@ -1,19 +1,14 @@
-import { DataSource } from 'typeorm';
+import dataSource from '@/data-source';
 
 export const databaseProviders = [
-  {
-    provide: 'DATA_SOURCE',
-    useFactory: async () => {
-      const dataSource = new DataSource({
-        type: 'sqlite',
-        database: 'test.db',
-        entities: [
-            __dirname + '/../**/*.entity{.ts,.js}',
-        ],
-        synchronize: true,
-      });
+    {
+        provide: 'DATA_SOURCE',
+        useFactory: async () => {
+            if (!dataSource.isInitialized) {
+                await dataSource.initialize();
+            }
 
-      return dataSource.initialize();
+            return dataSource;
+        },
     },
-  },
 ];
