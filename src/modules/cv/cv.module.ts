@@ -1,17 +1,22 @@
 import { Module } from '@nestjs/common';
 import { CvService } from './cv.service';
-import { cvProviders } from './providers/cv.providers';
-import { DatabaseModule } from '@/databases/database.module';
 import { CvController } from './cv.controller';
+import { DatabaseModule } from '@/databases/database.module';
 
 @Module({
-    imports: [DatabaseModule],
-    controllers: [
-        CvController
+    imports: [
+        // TypeOrmModule.forFeature([
+        //     Cv,
+        //     CvJobKeyword,
+        //     CvVersion,
+        //     CvExport,
+        //     CvTemplate,
+        //     AiPromptLog,
+        // ]),
+        DatabaseModule
     ],
-    providers: [
-        ...cvProviders,
-        CvService,
-    ],
+    controllers: [CvController],
+    providers: [CvService],
+    exports: [CvService],
 })
-export class CvModule { }
+export class CvModule {}

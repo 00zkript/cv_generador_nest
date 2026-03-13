@@ -2,7 +2,6 @@ import { Controller, Get, Put, Delete, Body, Req, HttpCode, HttpStatus, UseGuard
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Request } from 'express';
 import { UsersService } from './users.service';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('users')
@@ -13,12 +12,12 @@ export class UsersController {
     constructor(private usersService: UsersService) {}
 
     @Get('me')
-    @ApiOperation({ summary: 'Obtener datos del usuario actual' })
+    @ApiOperation({ summary: 'Obtener datos del usuario actual con perfil, habilidades, experiencias, educación y proyectos' })
     @ApiResponse({ status: 200, description: 'Usuario encontrado' })
     @ApiResponse({ status: 401, description: 'No autorizado' })
     async getMe(@Req() req: Request) {
         const user = req.user as { id: number };
-        return this.usersService.findById(user.id);
+        return this.usersService.findByIdWithRelations(user.id);
     }
 
     @Put('me')
@@ -26,9 +25,9 @@ export class UsersController {
     @ApiResponse({ status: 200, description: 'Usuario actualizado' })
     @ApiResponse({ status: 401, description: 'No autorizado' })
     @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
-    async updateMe(@Req() req: Request, @Body() updateUserDto: UpdateUserDto) {
+    async updateMe(@Req() req: Request, @Body() updateData: any) {
         const user = req.user as { id: number };
-        return this.usersService.update(user.id, updateUserDto);
+        return this.usersService.update(user.id, updateData);
     }
 
     @Delete('me')

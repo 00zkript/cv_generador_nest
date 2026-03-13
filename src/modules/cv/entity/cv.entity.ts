@@ -1,61 +1,40 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, OneToMany, ManyToOne } from 'typeorm';
-import { Contact } from './contact.entity';
-import { Language } from './language.entity';
-import { Skill } from './skill.entity';
-import { Study } from './study.entity';
-import { WorkExperience } from './work-experience.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne } from 'typeorm';
 import { User } from '../../auth/entity/user.entity';
+import { CvJobKeyword } from './cv-job-keyword.entity';
+import { CvVersion } from './cv-version.entity';
 
 @Entity('cvs')
 export class Cv {
     @PrimaryGeneratedColumn()
     id!: number;
 
-    @Column({ unique: true })
-    name!: string;
-
-    @Column()
-    subject!: string;
-
-    @Column({ length: 250 })
-    version!: string;
-
-    @Column({ length: 250 })
-    resume!: string;
-
-    @Column({ nullable: true })
-    technical_contributions_projects!: string;
-    
-    @Column({ length: 20 })
-    language!: string;
-
-    @Column({ default: true })
-    status!: boolean;
-
     @Column({ nullable: true })
     user_id!: number;
+
+    @Column({ nullable: true })
+    title!: string;
+
+    @Column({ name: 'target_role', nullable: true })
+    target_role!: string;
+
+    @Column({ name: 'target_company', nullable: true })
+    target_company!: string;
+
+    @Column({ name: 'job_description', type: 'text', nullable: true })
+    job_description!: string;
+
+    @CreateDateColumn({ name: 'created_at' })
+    created_at!: Date;
+
+    @UpdateDateColumn({ name: 'updated_at' })
+    updated_at!: Date;
 
     @ManyToOne(() => User, user => user.cvs, { nullable: true })
     user!: User;
 
-    @CreateDateColumn()
-    created_at!: Date;
+    @OneToMany(() => CvJobKeyword, keyword => keyword.cv, { cascade: true })
+    job_keywords!: CvJobKeyword[];
 
-    @UpdateDateColumn()
-    updated_at!: Date;
-
-    @OneToOne(() => Contact, contact => contact.cv, { cascade: true })
-    contact!: Contact;
-
-    @OneToMany(() => Skill, skill => skill.cv, { cascade: true })
-    skills!: Skill[];
-
-    @OneToMany(() => Study, study => study.cv, { cascade: true })
-    studies!: Study[];
-
-    @OneToMany(() => Language, language => language.cv, { cascade: true })
-    languages!: Language[];
-
-    @OneToMany(() => WorkExperience, workExperience => workExperience.cv, { cascade: true })
-    works_experiences!: WorkExperience[];
+    @OneToMany(() => CvVersion, version => version.cv, { cascade: true })
+    versions!: CvVersion[];
 }
