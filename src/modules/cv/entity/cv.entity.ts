@@ -1,9 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, OneToMany, ManyToOne } from 'typeorm';
 import { Contact } from './contact.entity';
 import { Language } from './language.entity';
 import { Skill } from './skill.entity';
 import { Study } from './study.entity';
 import { WorkExperience } from './work-experience.entity';
+import { User } from '../../auth/entity/user.entity';
 
 @Entity('cvs')
 export class Cv {
@@ -30,6 +31,12 @@ export class Cv {
 
     @Column({ default: true })
     status!: boolean;
+
+    @Column({ nullable: true })
+    user_id!: number;
+
+    @ManyToOne(() => User, user => user.cvs, { nullable: true })
+    user!: User;
 
     @CreateDateColumn()
     created_at!: Date;
