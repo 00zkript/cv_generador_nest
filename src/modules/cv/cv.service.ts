@@ -3,7 +3,6 @@ import { Repository, DataSource, QueryRunner } from 'typeorm';
 import { Cv } from './entity/cv.entity';
 import { Contact } from './entity/contact.entity';
 import { WorkExperience } from './entity/work-experience.entity';
-import { Achievement } from './entity/achievement.entity';
 import { Skill } from './entity/skill.entity';
 import { Study } from './entity/study.entity';
 import { Language } from './entity/language.entity';

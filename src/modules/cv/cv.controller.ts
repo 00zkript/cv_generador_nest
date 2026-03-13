@@ -1,5 +1,5 @@
 import { ZodValidationPipe } from "@anatine/zod-nestjs";
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res, UsePipes } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res, UseGuards, UsePipes } from "@nestjs/common";
 import { ApiAcceptedResponse, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CvService } from "./cv.service";
 import { Response } from "express";
@@ -8,9 +8,11 @@ import { CreateCvDto } from "./dto/create-cv.dto";
 import { UpdateCvDto } from "./dto/update-cv.dto";
 import { ResponseCvDto } from "./dto/response-cv.dto";
 import { PaginateCvDto } from "./dto/paginate-cv.dto";
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 
 @ApiTags('cvs')
 @Controller('cvs')
+@UseGuards(JwtAuthGuard)
 @UsePipes(ZodValidationPipe)
 export class CvController {
 
