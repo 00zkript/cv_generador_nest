@@ -1,4 +1,5 @@
-import { Injectable, ConflictException, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entity/user.entity';
 import * as bcrypt from 'bcrypt';
@@ -6,7 +7,7 @@ import * as bcrypt from 'bcrypt';
 @Injectable()
 export class UsersService {
     constructor(
-        @Inject('CONNECTION')
+        @InjectRepository(User)
         private usersRepository: Repository<User>,
     ) {}
 

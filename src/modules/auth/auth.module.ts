@@ -8,20 +8,25 @@ import { UsersController } from './users.controller';
 import { AuthService } from './auth.service';
 import { UsersService } from './users.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { DatabaseModule } from '@/databases/database.module';
+import { User } from './entity/user.entity';
+import { UserProfile } from './entity/user-profile.entity';
+import { UserSkill } from './entity/user-skill.entity';
+import { UserExperience } from './entity/user-experience.entity';
+import { UserExperienceAchievement } from './entity/user-experience-achievement.entity';
+import { UserEducation } from './entity/user-education.entity';
+import { UserProject } from './entity/user-project.entity';
 
 @Module({
     imports: [
-        // TypeOrmModule.forFeature([
-        //     User, 
-        //     UserProfile, 
-        //     UserSkill, 
-        //     UserExperience, 
-        //     UserExperienceAchievement,
-        //     UserEducation, 
-        //     UserProject
-        // ]),
-        DatabaseModule,
+        TypeOrmModule.forFeature([
+            User, 
+            UserProfile, 
+            UserSkill, 
+            UserExperience, 
+            UserExperienceAchievement,
+            UserEducation, 
+            UserProject
+        ]),
         PassportModule.register({ defaultStrategy: 'jwt' }),
         JwtModule.registerAsync({
             inject: [ConfigService],

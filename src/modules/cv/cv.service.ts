@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, QueryRunner } from 'typeorm';
 import { Cv } from './entity/cv.entity';
 import { CvJobKeyword } from './entity/cv-job-keyword.entity';
@@ -9,9 +10,8 @@ export class CvService {
     private readonly relations = ['job_keywords', 'versions'];
 
     constructor(
-        @Inject('CONNECTION')
+        @InjectRepository(Cv)
         private cvRepository: Repository<Cv>,
-        @Inject('CONNECTION')
         private dataSource: DataSource,
     ) {}
 
