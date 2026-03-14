@@ -31,8 +31,8 @@ import { UserProject } from './entity/user-project.entity';
         JwtModule.registerAsync({
             inject: [ConfigService],
             useFactory: (config: ConfigService) => ({
-                secret: config.get<string>('JWT_SECRET') || 'default-secret-key',
-                signOptions: { expiresIn: '24h' },
+                secret: config.getOrThrow('jwt.secret'),
+                signOptions: { expiresIn: config.getOrThrow('jwt.expiresIn') },
             }),
         }),
     ],
