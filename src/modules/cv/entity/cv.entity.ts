@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../../auth/entity/user.entity';
 import { CvJobKeyword } from './cv-job-keyword.entity';
 import { CvVersion } from './cv-version.entity';
@@ -30,6 +30,7 @@ export class Cv {
     updated_at!: Date;
 
     @ManyToOne(() => User, user => user.cvs, { nullable: true })
+    @JoinColumn({ name: 'user_id' })
     user!: User;
 
     @OneToMany(() => CvJobKeyword, keyword => keyword.cv, { cascade: true })
