@@ -1,9 +1,11 @@
-import { Controller, Delete, Get, Param, Post, Put, Body, Req, UseGuards, ParseIntPipe } from "@nestjs/common";
-import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags, ApiBearerAuth } from "@nestjs/swagger";
+import { Controller, Delete, Get, Param, Post, Put, Body, Req, UseGuards, ParseIntPipe, Query } from "@nestjs/common";
+import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags, ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
 import { CvService } from "./cv.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Request } from "express";
 import { CreateCvDto, UpdateCvDto, CreateFullCvDto } from "./dto/cv.dto";
+import { PageOptionsDto, PaginateDto } from "../../dtos/paginate.dto";
+import { Cv } from "./entity/cv.entity";
 
 @ApiTags('cvs')
 @Controller('cvs')
@@ -15,12 +17,13 @@ export class CvController {
         private readonly cvService: CvService
     ) { }
 
-    @ApiOperation({ summary: 'Obtener todos los CVs del usuario actual' })
-    @ApiOkResponse({ type: [String] })
+    @ApiOperation({ summary: 'Obtener todos los CVs del usuario actual (paginado)' })
+    @ApiOkResponse({ type: PaginateDto })
+    @ApiQuery({ type: PageOptionsDto })
     @Get()
-    index(@Req() req: Request) {
+    index(@Req() req: Request, @Query() pageOptions: PageOptionsDto) {
         const user = req.user as { id: number };
-        return this.cvService.getAll(user.id);
+        return this.cvService.getAll(user.id, pageOptions);
     }
 
     @ApiOperation({ summary: 'Obtener un CV por ID' })

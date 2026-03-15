@@ -5,6 +5,7 @@ import { Cv } from './entity/cv.entity';
 import { CvJobKeyword } from './entity/cv-job-keyword.entity';
 import { CvVersion } from './entity/cv-version.entity';
 import { CreateFullCvDto } from './dto/cv.dto';
+import { PageOptionsDto, PaginateDto } from '../../dtos/paginate.dto';
 
 @Injectable()
 export class CvService {
@@ -21,13 +22,34 @@ export class CvService {
         private dataSource: DataSource,
     ) {}
 
-    async getAll(userId?: number): Promise<Cv[]> {
-        this.logger.debug(`Obteniendo todos los CVs, userId: ${userId}`);
+    async getAll(userId?: number, pageOptions?: PageOptionsDto): Promise<PaginateDto<Cv>> {
+        this.logger.debug(`Obteniendo CVs paginados, userId: ${userId}, page: ${pageOptions?.page}, limit: ${pageOptions?.limit}`);
+        
+        const page = pageOptions?.page ?? 1;
+        const limit = pageOptions?.limit ?? 10;
+        
         const where = userId ? { user_id: userId } : {};
-        return this.cvRepository.find({
+        
+        const [cvs, total] = await this.cvRepository.findAndCount({
             where,
             relations: this.relations,
+            take: limit,
+            skip: (page - 1) * limit,
+            order: { created_at: 'DESC' },
         });
+
+        const totalPages = Math.ceil(total / limit);
+        
+        return {
+            total,
+            per_page: limit,
+            current_page: page,
+            last_page: totalPages,
+            total_pages: totalPages,
+            from: total > 0 ? (page - 1) * limit + 1 : 0,
+            to: Math.min(page * limit, total),
+            data: cvs,
+        };
     }
 
     async getById(id: number): Promise<Cv> {
