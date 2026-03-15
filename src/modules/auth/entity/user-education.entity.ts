@@ -24,6 +24,9 @@ export class UserEducation {
     @Column({ name: 'end_date', type: 'date', nullable: true })
     end_date!: Date;
 
+    @Column({ default: 0 })
+    position!: number;
+
     @CreateDateColumn()
     created_at!: Date;
 

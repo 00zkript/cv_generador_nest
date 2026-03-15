@@ -15,6 +15,9 @@ export class CvJobKeyword {
     @Column({ nullable: true })
     weight!: number;
 
+    @Column({ default: 0 })
+    position!: number;
+
     @ManyToOne(() => Cv, cv => cv.job_keywords)
     @JoinColumn({ name: 'cv_id' })
     cv!: Cv;

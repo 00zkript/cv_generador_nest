@@ -35,7 +35,11 @@ export class CvService {
             relations: this.relations,
             take: limit,
             skip: (page - 1) * limit,
-            order: { created_at: 'DESC' },
+            order: { 
+                created_at: 'DESC',
+                job_keywords: { position: 'ASC' },
+                versions: { position: 'ASC' },
+            },
         });
 
         const totalPages = Math.ceil(total / limit);
@@ -57,6 +61,10 @@ export class CvService {
         const cv = await this.cvRepository.findOne({
             where: { id },
             relations: this.relations,
+            order: {
+                job_keywords: { position: 'ASC' },
+                versions: { position: 'ASC' },
+            },
         });
 
         if (!cv) {
@@ -90,11 +98,12 @@ export class CvService {
             this.logger.debug(`CV creado con ID: ${savedCv.id}`);
 
             if (data.job_keywords && data.job_keywords.length > 0) {
-                const jobKeywords = data.job_keywords.map(kw => 
+                const jobKeywords = data.job_keywords.map((kw, index) => 
                     this.cvJobKeywordRepository.create({
                         cv_id: savedCv.id,
                         keyword: kw.keyword,
                         weight: kw.weight ?? 1,
+                        position: index,
                     })
                 );
                 await queryRunner.manager.save(jobKeywords);
@@ -106,6 +115,7 @@ export class CvService {
                 const version = this.cvVersionRepository.create({
                     cv_id: savedCv.id,
                     version_number: versionCount + 1,
+                    position: versionCount,
                     prompt_used: data.version.generated_with,
                     content_json: data.version.content ? JSON.parse(data.version.content) : {},
                 });
@@ -140,18 +150,22 @@ export class CvService {
     }
 
     async addJobKeyword(cvId: number, keyword: string, weight: number): Promise<CvJobKeyword> {
+        const count = await this.cvJobKeywordRepository.count({ where: { cv_id: cvId } });
         const jobKeyword = new CvJobKeyword();
         jobKeyword.cv_id = cvId;
         jobKeyword.keyword = keyword;
         jobKeyword.weight = weight;
-        return jobKeyword;
+        jobKeyword.position = count;
+        return this.cvJobKeywordRepository.save(jobKeyword);
     }
 
     async createVersion(cvId: number, data: Partial<CvVersion>): Promise<CvVersion> {
+        const count = await this.cvVersionRepository.count({ where: { cv_id: cvId } });
         const version = new CvVersion();
         version.cv_id = cvId;
+        version.position = count;
         Object.assign(version, data);
-        return version;
+        return this.cvVersionRepository.save(version);
     }
 
     private async startTransaction(): Promise<QueryRunner> {

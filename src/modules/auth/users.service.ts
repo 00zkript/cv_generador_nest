@@ -48,6 +48,12 @@ export class UsersService {
                 education: true,
                 projects: true,
                 cvs: true
+            },
+            order: {
+                skills: { position: 'ASC' },
+                experiences: { position: 'ASC' },
+                education: { position: 'ASC' },
+                projects: { position: 'ASC' },
             }
         });
     }
@@ -109,18 +115,19 @@ export class UsersService {
 
             if (data.skills) {
                 await this.skillRepository.delete({ user_id: userId });
-                const skills = data.skills.map(skill => 
-                    this.skillRepository.create({ ...skill, user_id: userId })
+                const skills = data.skills.map((skill, index) => 
+                    this.skillRepository.create({ ...skill, user_id: userId, position: index })
                 );
                 await queryRunner.manager.save(skills);
             }
 
             if (data.experiences) {
                 await this.experienceRepository.delete({ user_id: userId });
-                const experiences = data.experiences.map(exp => {
+                const experiences = data.experiences.map((exp, index) => {
                     const experience = this.experienceRepository.create({
                         ...exp,
                         user_id: userId,
+                        position: index,
                         start_date: exp.start_date ? new Date(exp.start_date) : undefined,
                         end_date: exp.end_date ? new Date(exp.end_date) : undefined,
                     });
@@ -131,10 +138,11 @@ export class UsersService {
 
             if (data.education) {
                 await this.educationRepository.delete({ user_id: userId });
-                const education = data.education.map(edu => 
+                const education = data.education.map((edu, index) => 
                     this.educationRepository.create({
                         ...edu,
                         user_id: userId,
+                        position: index,
                         start_date: edu.start_date ? new Date(edu.start_date) : undefined,
                         end_date: edu.end_date ? new Date(edu.end_date) : undefined,
                     })
@@ -144,13 +152,14 @@ export class UsersService {
 
             if (data.projects) {
                 await this.projectRepository.delete({ user_id: userId });
-                const projects = data.projects.map(proj => 
+                const projects = data.projects.map((proj, index) => 
                     this.projectRepository.create({
                         title: proj.title,
                         description: proj.description,
                         project_url: proj.project_url,
                         github_url: proj.github_url,
                         user_id: userId,
+                        position: index,
                     })
                 );
                 await queryRunner.manager.save(projects);
@@ -185,7 +194,8 @@ export class UsersService {
     }
 
     async addSkill(userId: number, skillData: SkillDto): Promise<UserSkill> {
-        const skill = this.skillRepository.create({ ...skillData, user_id: userId });
+        const count = await this.skillRepository.count({ where: { user_id: userId } });
+        const skill = this.skillRepository.create({ ...skillData, user_id: userId, position: count });
         return this.skillRepository.save(skill);
     }
 
@@ -206,9 +216,11 @@ export class UsersService {
     }
 
     async addExperience(userId: number, experienceData: ExperienceDto): Promise<UserExperience> {
+        const count = await this.experienceRepository.count({ where: { user_id: userId } });
         const experience = this.experienceRepository.create({
             ...experienceData,
             user_id: userId,
+            position: count,
             start_date: experienceData.start_date ? new Date(experienceData.start_date) : undefined,
             end_date: experienceData.end_date ? new Date(experienceData.end_date) : undefined,
         });
@@ -235,9 +247,11 @@ export class UsersService {
     }
 
     async addEducation(userId: number, educationData: EducationDto): Promise<UserEducation> {
+        const count = await this.educationRepository.count({ where: { user_id: userId } });
         const education = this.educationRepository.create({
             ...educationData,
             user_id: userId,
+            position: count,
             start_date: educationData.start_date ? new Date(educationData.start_date) : undefined,
             end_date: educationData.end_date ? new Date(educationData.end_date) : undefined,
         });
@@ -264,12 +278,14 @@ export class UsersService {
     }
 
     async addProject(userId: number, projectData: ProjectDto): Promise<UserProject> {
+        const count = await this.projectRepository.count({ where: { user_id: userId } });
         const project = this.projectRepository.create({
             title: projectData.title,
             description: projectData.description,
             project_url: projectData.project_url,
             github_url: projectData.github_url,
             user_id: userId,
+            position: count,
         });
         return this.projectRepository.save(project);
     }

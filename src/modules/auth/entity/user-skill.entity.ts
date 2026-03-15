@@ -21,6 +21,9 @@ export class UserSkill {
     @Column({ nullable: true })
     category!: string;
 
+    @Column({ default: 0 })
+    position!: number;
+
     @CreateDateColumn()
     created_at!: Date;
 

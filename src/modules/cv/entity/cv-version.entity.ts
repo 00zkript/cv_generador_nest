@@ -22,6 +22,9 @@ export class CvVersion {
     @Column({ name: 'ats_score', type: 'numeric', nullable: true })
     ats_score!: number;
 
+    @Column({ default: 0 })
+    position!: number;
+
     @CreateDateColumn()
     created_at!: Date;
 

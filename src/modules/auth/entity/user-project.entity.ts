@@ -21,6 +21,9 @@ export class UserProject {
     @Column({ name: 'github_url', nullable: true })
     github_url!: string;
 
+    @Column({ default: 0 })
+    position!: number;
+
     @CreateDateColumn()
     created_at!: Date;
 

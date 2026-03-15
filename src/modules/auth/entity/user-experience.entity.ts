@@ -28,6 +28,9 @@ export class UserExperience {
     @Column({ type: 'text', nullable: true })
     description!: string;
 
+    @Column({ default: 0 })
+    position!: number;
+
     @CreateDateColumn()
     created_at!: Date;
 
