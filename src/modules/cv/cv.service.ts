@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, QueryRunner } from 'typeorm';
 import { Cv } from './entity/cv.entity';
@@ -8,6 +8,7 @@ import { CreateFullCvDto } from './dto/cv.dto';
 
 @Injectable()
 export class CvService {
+    private readonly logger = new Logger(CvService.name);
     private readonly relations = ['job_keywords', 'versions'];
 
     constructor(
@@ -21,6 +22,7 @@ export class CvService {
     ) {}
 
     async getAll(userId?: number): Promise<Cv[]> {
+        this.logger.debug(`Obteniendo todos los CVs, userId: ${userId}`);
         const where = userId ? { user_id: userId } : {};
         return this.cvRepository.find({
             where,
@@ -29,6 +31,7 @@ export class CvService {
     }
 
     async getById(id: number): Promise<Cv> {
+        this.logger.debug(`Obteniendo CV con ID: ${id}`);
         const cv = await this.cvRepository.findOne({
             where: { id },
             relations: this.relations,
@@ -42,6 +45,7 @@ export class CvService {
     }
 
     async create(data: Partial<Cv>, userId: number): Promise<Cv> {
+        this.logger.debug(`Creando CV para usuario: ${userId}`);
         const cv = this.cvRepository.create({
             ...data,
             user_id: userId,
@@ -50,6 +54,7 @@ export class CvService {
     }
 
     async createFullCv(data: CreateFullCvDto, userId: number): Promise<Cv> {
+        this.logger.debug(`Creando CV completo para usuario: ${userId}`);
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
         await queryRunner.startTransaction();
@@ -60,6 +65,7 @@ export class CvService {
                 user_id: userId,
             });
             const savedCv = await queryRunner.manager.save(cv);
+            this.logger.debug(`CV creado con ID: ${savedCv.id}`);
 
             if (data.job_keywords && data.job_keywords.length > 0) {
                 const jobKeywords = data.job_keywords.map(kw => 
@@ -70,6 +76,7 @@ export class CvService {
                     })
                 );
                 await queryRunner.manager.save(jobKeywords);
+                this.logger.debug(`Agregados ${data.job_keywords.length} job keywords`);
             }
 
             if (data.version) {
@@ -81,12 +88,15 @@ export class CvService {
                     content_json: data.version.content ? JSON.parse(data.version.content) : {},
                 });
                 await queryRunner.manager.save(version);
+                this.logger.debug(`Creada versión ${versionCount + 1} del CV`);
             }
 
             await queryRunner.commitTransaction();
+            this.logger.log(`CV ${savedCv.id} creado exitosamente`);
             return this.getById(savedCv.id);
         } catch (error) {
             await queryRunner.rollbackTransaction();
+            this.logger.error(`Error al crear CV: ${error.message}`);
             throw error;
         } finally {
             await queryRunner.release();
@@ -94,14 +104,17 @@ export class CvService {
     }
 
     async update(id: number, data: Partial<Cv>): Promise<Cv> {
+        this.logger.debug(`Actualizando CV con ID: ${id}`);
         const cv = await this.getById(id);
         Object.assign(cv, data);
         return this.cvRepository.save(cv);
     }
 
     async delete(id: number): Promise<void> {
+        this.logger.debug(`Eliminando CV con ID: ${id}`);
         const cv = await this.getById(id);
         await this.cvRepository.remove(cv);
+        this.logger.log(`CV ${id} eliminado`);
     }
 
     async addJobKeyword(cvId: number, keyword: string, weight: number): Promise<CvJobKeyword> {

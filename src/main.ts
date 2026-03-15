@@ -1,13 +1,23 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { patchNestjsSwagger } from '@anatine/zod-nestjs';
 import { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 
+const logger = new Logger('Bootstrap');
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const isDebug = process.env.DEBUG === 'true';
+  
+  if (isDebug) {
+    logger.debug('Modo debug activado');
+  }
+  
+  const app = await NestFactory.create(AppModule, {
+    logger: isDebug ? ['log', 'debug', 'error', 'warn', 'verbose'] : ['error', 'warn'],
+  });
 
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
