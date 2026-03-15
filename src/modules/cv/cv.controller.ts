@@ -3,6 +3,7 @@ import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags, ApiBearerAuth
 import { CvService } from "./cv.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Request } from "express";
+import { CreateCvDto, UpdateCvDto, CreateFullCvDto } from "./dto/cv.dto";
 
 @ApiTags('cvs')
 @Controller('cvs')
@@ -32,15 +33,15 @@ export class CvController {
     @ApiOperation({ summary: 'Crear un nuevo CV' })
     @ApiCreatedResponse({ type: String })
     @Post()
-    store(@Req() req: Request, @Body() data: any) {
+    store(@Req() req: Request, @Body() data: CreateFullCvDto) {
         const user = req.user as { id: number };
-        return this.cvService.create(data, user.id);
+        return this.cvService.createFullCv(data, user.id);
     }
 
     @ApiOperation({ summary: 'Actualizar un CV' })
     @ApiOkResponse({ type: String })
     @Put(':id')
-    update(@Param('id', ParseIntPipe) id: number, @Body() data: any) {
+    update(@Param('id', ParseIntPipe) id: number, @Body() data: UpdateCvDto) {
         return this.cvService.update(id, data);
     }
 

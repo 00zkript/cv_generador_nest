@@ -4,6 +4,7 @@ import { Repository, DataSource, QueryRunner } from 'typeorm';
 import { Cv } from './entity/cv.entity';
 import { CvJobKeyword } from './entity/cv-job-keyword.entity';
 import { CvVersion } from './entity/cv-version.entity';
+import { CreateFullCvDto } from './dto/cv.dto';
 
 @Injectable()
 export class CvService {
@@ -12,6 +13,10 @@ export class CvService {
     constructor(
         @InjectRepository(Cv)
         private cvRepository: Repository<Cv>,
+        @InjectRepository(CvJobKeyword)
+        private cvJobKeywordRepository: Repository<CvJobKeyword>,
+        @InjectRepository(CvVersion)
+        private cvVersionRepository: Repository<CvVersion>,
         private dataSource: DataSource,
     ) {}
 
@@ -42,6 +47,50 @@ export class CvService {
             user_id: userId,
         });
         return this.cvRepository.save(cv);
+    }
+
+    async createFullCv(data: CreateFullCvDto, userId: number): Promise<Cv> {
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const cv = this.cvRepository.create({
+                ...data.cv,
+                user_id: userId,
+            });
+            const savedCv = await queryRunner.manager.save(cv);
+
+            if (data.job_keywords && data.job_keywords.length > 0) {
+                const jobKeywords = data.job_keywords.map(kw => 
+                    this.cvJobKeywordRepository.create({
+                        cv_id: savedCv.id,
+                        keyword: kw.keyword,
+                        weight: kw.weight ?? 1,
+                    })
+                );
+                await queryRunner.manager.save(jobKeywords);
+            }
+
+            if (data.version) {
+                const versionCount = await this.cvVersionRepository.count({ where: { cv_id: savedCv.id } });
+                const version = this.cvVersionRepository.create({
+                    cv_id: savedCv.id,
+                    version_number: versionCount + 1,
+                    prompt_used: data.version.generated_with,
+                    content_json: data.version.content ? JSON.parse(data.version.content) : {},
+                });
+                await queryRunner.manager.save(version);
+            }
+
+            await queryRunner.commitTransaction();
+            return this.getById(savedCv.id);
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
     }
 
     async update(id: number, data: Partial<Cv>): Promise<Cv> {
