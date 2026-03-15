@@ -38,6 +38,13 @@ export class UsersService {
 
     async findByIdWithRelations(id: number): Promise<User | null> {
         return this.usersRepository.findOne({
+            select: {
+                id: true,
+                email: true,
+                name: true,
+                created_at: true,
+                updated_at: true,
+            },
             where: { id },
             relations: {
                 profile: true,
