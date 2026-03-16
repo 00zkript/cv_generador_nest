@@ -330,4 +330,16 @@ export class CvService {
         await queryRunner.startTransaction();
         return queryRunner;
     }
+
+    async addVersion(cvId: number, contentJson: Record<string, unknown>): Promise<CvVersion> {
+        const versionCount = await this.cvVersionRepository.count({ where: { cv_id: cvId } });
+        const version = this.cvVersionRepository.create({
+            cv_id: cvId,
+            version_number: versionCount + 1,
+            position: versionCount,
+            prompt_used: 'manual',
+            content_json: contentJson,
+        });
+        return this.cvVersionRepository.save(version);
+    }
 }

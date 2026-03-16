@@ -86,4 +86,11 @@ export class CvController {
         
         res.end(pdfBuffer);
     }
+
+    @ApiOperation({ summary: 'Agregar una versión al CV' })
+    @ApiCreatedResponse({ type: String })
+    @Post(':id/versions')
+    addVersion(@Param('id', ParseIntPipe) id: number, @Body() data: { content_json: Record<string, unknown> }) {
+        return this.cvService.addVersion(id, data.content_json);
+    }
 }

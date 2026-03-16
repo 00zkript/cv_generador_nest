@@ -57,6 +57,11 @@ export class ProfileDto {
 }
 
 export class SkillDto {
+    @ApiProperty({ example: 1, required: false })
+    @IsNumber()
+    @IsOptional()
+    id?: number;
+
     @ApiProperty({ example: 'TypeScript' })
     @IsString()
     name!: string;
@@ -80,6 +85,11 @@ export class SkillDto {
 }
 
 export class ExperienceDto {
+    @ApiProperty({ example: 1, required: false })
+    @IsNumber()
+    @IsOptional()
+    id?: number;
+
     @ApiProperty({ example: 'Tech Corp Inc.' })
     @IsString()
     company!: string;
@@ -110,6 +120,11 @@ export class ExperienceDto {
 }
 
 export class EducationDto {
+    @ApiProperty({ example: 1, required: false })
+    @IsNumber()
+    @IsOptional()
+    id?: number;
+
     @ApiProperty({ example: 'MIT' })
     @IsString()
     institution!: string;
@@ -136,6 +151,11 @@ export class EducationDto {
 }
 
 export class ProjectDto {
+    @ApiProperty({ example: 1, required: false })
+    @IsNumber()
+    @IsOptional()
+    id?: number;
+
     @ApiProperty({ example: 'E-commerce Platform' })
     @IsString()
     title!: string;

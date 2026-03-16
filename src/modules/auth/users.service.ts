@@ -123,7 +123,14 @@ export class UsersService {
             if (data.skills) {
                 await this.skillRepository.delete({ user_id: userId });
                 const skills = data.skills.map((skill, index) => 
-                    this.skillRepository.create({ ...skill, user_id: userId, position: index })
+                    this.skillRepository.create({ 
+                        name: skill.name,
+                        level: skill.level,
+                        years_experience: skill.years_experience,
+                        category: skill.category,
+                        user_id: userId, 
+                        position: index 
+                    })
                 );
                 await queryRunner.manager.save(skills);
             }
@@ -132,7 +139,10 @@ export class UsersService {
                 await this.experienceRepository.delete({ user_id: userId });
                 const experiences = data.experiences.map((exp, index) => {
                     const experience = this.experienceRepository.create({
-                        ...exp,
+                        company: exp.company,
+                        role: exp.role,
+                        is_current: exp.is_current,
+                        description: exp.description,
                         user_id: userId,
                         position: index,
                         start_date: exp.start_date ? new Date(exp.start_date) : undefined,
@@ -147,7 +157,9 @@ export class UsersService {
                 await this.educationRepository.delete({ user_id: userId });
                 const education = data.education.map((edu, index) => 
                     this.educationRepository.create({
-                        ...edu,
+                        institution: edu.institution,
+                        degree: edu.degree,
+                        field_of_study: edu.field_of_study,
                         user_id: userId,
                         position: index,
                         start_date: edu.start_date ? new Date(edu.start_date) : undefined,
