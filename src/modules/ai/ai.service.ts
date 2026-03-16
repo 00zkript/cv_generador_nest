@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Logger, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 export interface UserData {
@@ -66,57 +66,287 @@ export interface GeneratedCvData {
     ats_optimized_content: Record<string, unknown>;
 }
 
+interface ApiErrorResponse {
+    error?: {
+        message?: string;
+        code?: string;
+        type?: string;
+    };
+}
+
+interface ChoicesMessage {
+    content?: string;
+}
+
+interface Choices {
+    message?: ChoicesMessage;
+}
+
+interface DeepSeekResponse {
+    id?: string;
+    choices?: Choices[];
+    usage?: {
+        prompt_tokens?: number;
+        completion_tokens?: number;
+        total_tokens?: number;
+    };
+    error?: {
+        message?: string;
+        type?: string;
+        code?: string;
+    };
+}
+
 @Injectable()
 export class AiService {
     private readonly logger = new Logger(AiService.name);
     private readonly deepseekApiKey: string;
     private readonly deepseekBaseUrl = 'https://api.deepseek.com/v1';
+    private readonly model = 'deepseek-chat';
 
     constructor(private configService: ConfigService) {
         this.deepseekApiKey = this.configService.get<string>('DEEPSEEK_API_KEY') || '';
+        
+        if (!this.deepseekApiKey) {
+            this.logger.warn('DEEPSEEK_API_KEY no está configurada en las variables de entorno');
+        }
     }
 
     async generateCvWithDeepSeek(userData: UserData, jobOffer: JobOfferData): Promise<GeneratedCvData> {
-        this.logger.debug(`Generando CV para ${jobOffer.target_role} en ${jobOffer.target_company}`);
+        this.logger.log({
+            message: 'Iniciando generación de CV con IA',
+            targetRole: jobOffer.target_role,
+            targetCompany: jobOffer.target_company,
+            userName: userData.name,
+        });
+
+        this.validateInputData(userData, jobOffer);
 
         const prompt = this.buildPrompt(userData, jobOffer);
 
         try {
-            const response = await fetch(`${this.deepseekBaseUrl}/chat/completions`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.deepseekApiKey}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    model: 'deepseek-chat',
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'Eres un experto en optimización de CVs para pasar filtros ATS y atraer reclutadores. Devuelve siempre un JSON válido con la estructura especificada.'
-                        },
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    temperature: 0.7,
-                    max_tokens: 4000,
-                }),
-            });
+            const response = await this.callDeepSeekApi(prompt);
+            const content = response.choices?.[0]?.message?.content;
 
-            const data = await response.json() as { choices?: Array<{ message?: { content: string } }> };
-            const content = data.choices?.[0]?.message?.content;
-            this.logger.debug(`Respuesta de DeepSeek recibida`);
+            this.logger.log({
+                message: 'Respuesta de DeepSeek recibida',
+                hasContent: !!content,
+                tokensUsed: response.usage?.total_tokens,
+            });
 
             return this.parseAiResponse(content);
         } catch (error) {
-            this.logger.error(`Error al llamar a DeepSeek: ${error.message}`);
-            throw new Error(`Error al generar CV con IA: ${error.message}`);
+            this.handleAiError(error);
+            throw new HttpException(
+                'Ocurrió un error al generar el CV',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         }
     }
 
+    private validateInputData(userData: UserData, jobOffer: JobOfferData): void {
+        if (!jobOffer.target_role?.trim()) {
+            throw new HttpException(
+                'El puesto objetivo es requerido',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+
+        if (!jobOffer.target_company?.trim()) {
+            throw new HttpException(
+                'La empresa objetivo es requerida',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+
+        if (!jobOffer.job_description?.trim()) {
+            throw new HttpException(
+                'La descripción del puesto es requerida',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+
+        if (jobOffer.job_description.length < 50) {
+            throw new HttpException(
+                'La descripción del puesto debe tener al menos 50 caracteres',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+
+        if (!userData.name?.trim()) {
+            throw new HttpException(
+                'El nombre del usuario es requerido',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+    }
+
+    private async callDeepSeekApi(prompt: string): Promise<DeepSeekResponse> {
+        if (!this.deepseekApiKey) {
+            this.logger.error('DeepSeek API key no configurada');
+            throw new HttpException(
+                'El servicio de IA no está configurado correctamente. Contacte al administrador.',
+                HttpStatus.SERVICE_UNAVAILABLE,
+            );
+        }
+
+        const response = await fetch(`${this.deepseekBaseUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${this.deepseekApiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: this.model,
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'Eres un experto en optimización de CVs para pasar filtros ATS y atraer reclutadores. Devuelve siempre un JSON válido con la estructura especificada.',
+                    },
+                    {
+                        role: 'user',
+                        content: prompt,
+                    },
+                ],
+                temperature: 0.7,
+                max_tokens: 4000,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json() as ApiErrorResponse;
+            this.logger.error({
+                message: 'Error en la API de DeepSeek',
+                status: response.status,
+                error: errorData.error?.message,
+            });
+
+            if (response.status === 401) {
+                throw new HttpException(
+                    'Error de autenticación con el servicio de IA',
+                    HttpStatus.UNAUTHORIZED,
+                );
+            }
+
+            if (response.status === 429) {
+                throw new HttpException(
+                    'Límite de solicitudes alcanzado. Intente más tarde.',
+                    HttpStatus.TOO_MANY_REQUESTS,
+                );
+            }
+
+            if (response.status >= 500) {
+                throw new HttpException(
+                    'El servicio de IA no está disponible. Intente más tarde.',
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                );
+            }
+
+            throw new HttpException(
+                errorData.error?.message || 'Error al generar CV con IA',
+                HttpStatus.BAD_GATEWAY,
+            );
+        }
+
+        return response.json() as Promise<DeepSeekResponse>;
+    }
+
+    private parseAiResponse(content: string | undefined): GeneratedCvData {
+        if (!content) {
+            this.logger.error('La respuesta de la IA está vacía');
+            throw new HttpException(
+                'La respuesta del servicio de IA está vacía',
+                HttpStatus.BAD_GATEWAY,
+            );
+        }
+
+        try {
+            const jsonMatch = content.match(/\{[\s\S]*\}/);
+            
+            if (!jsonMatch || !jsonMatch[0]) {
+                this.logger.error('No se encontró JSON en la respuesta de la IA');
+                throw new HttpException(
+                    'El formato de respuesta de la IA no es válido',
+                    HttpStatus.BAD_GATEWAY,
+                );
+            }
+
+            const parsed = JSON.parse(jsonMatch[0]) as GeneratedCvData;
+            
+            this.validateParsedData(parsed);
+
+            return parsed;
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            
+            this.logger.error({
+                message: 'Error al parsear respuesta de IA',
+                error: error instanceof Error ? error.message : 'Error desconocido',
+            });
+            
+            throw new HttpException(
+                'No se pudo procesar la respuesta del servicio de IA',
+                HttpStatus.BAD_GATEWAY,
+            );
+        }
+    }
+
+    private validateParsedData(data: GeneratedCvData): void {
+        const requiredFields = ['summary', 'keywords', 'skills'];
+        const missingFields: string[] = [];
+
+        for (const field of requiredFields) {
+            if (!data[field as keyof GeneratedCvData]) {
+                missingFields.push(field);
+            }
+        }
+
+        if (missingFields.length > 0) {
+            this.logger.error({
+                message: 'Faltan campos requeridos en la respuesta de la IA',
+                missingFields,
+            });
+            throw new HttpException(
+                `La respuesta de la IA no contiene todos los campos requeridos: ${missingFields.join(', ')}`,
+                HttpStatus.BAD_GATEWAY,
+            );
+        }
+
+        if (!Array.isArray(data.keywords) || !Array.isArray(data.skills)) {
+            throw new HttpException(
+                'El formato de keywords/skills en la respuesta de la IA no es válido',
+                HttpStatus.BAD_GATEWAY,
+            );
+        }
+    }
+
+    private handleAiError(error: unknown): void {
+        if (error instanceof HttpException) {
+            throw error;
+        }
+
+        const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+        
+        this.logger.error({
+            message: 'Error inesperado al generar CV con IA',
+            error: errorMessage,
+            stack: error instanceof Error ? error.stack : undefined,
+        });
+
+        throw new HttpException(
+            'Ocurrió un error al generar el CV. Por favor, intente de nuevo.',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+    }
+
     private buildPrompt(userData: UserData, jobOffer: JobOfferData): string {
+        const formatDate = (date: Date | string | undefined): string => {
+            if (!date) return '';
+            return date instanceof Date ? date.toISOString().split('T')[0] : String(date);
+        };
+
         return `
 Eres un experto en recursos humanos y optimización de CVs para pasar filtros ATS (Applicant Tracking Systems).
 
@@ -144,7 +374,7 @@ ${userData.skills?.map(s => `- ${s.name} (${s.level || 'N/A'}, ${s.years_experie
 ${userData.experiences?.map(e => `
 - Empresa: ${e.company}
   Rol: ${e.role}
-  Período: ${e.start_date} - ${e.is_current ? 'Actual' : e.end_date}
+  Período: ${formatDate(e.start_date)} - ${e.is_current ? 'Actual' : formatDate(e.end_date)}
   Descripción: ${e.description || ''}
 `).join('\n') || 'Sin experiencias registradas'}
 
@@ -153,7 +383,7 @@ ${userData.education?.map(e => `
 - Instituto: ${e.institution}
   Título: ${e.degree}
   Campo de estudio: ${e.field_of_study || ''}
-  Período: ${e.start_date || ''} - ${e.end_date || ''}
+  Período: ${formatDate(e.start_date)} - ${formatDate(e.end_date)}
 `).join('\n') || 'Sin educación registrada'}
 
 **MIS PROYECTOS:**
@@ -208,22 +438,5 @@ Responde ÚNICAMENTE con un JSON válido (sin texto adicional) con esta estructu
 
 Responde solo con JSON, sin texto adicional.
 `;
-    }
-
-    private parseAiResponse(content: string | undefined): GeneratedCvData {
-        if (!content) {
-            throw new Error('La respuesta de la IA está vacía');
-        }
-        try {
-            const jsonMatch = content.match(/\{[\s\S]*\}/);
-            if (!jsonMatch || !jsonMatch[0]) {
-                throw new Error('No se encontró JSON en la respuesta');
-            }
-            return JSON.parse(jsonMatch[0]);
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-            this.logger.error(`Error al parsear respuesta de IA: ${errorMessage}`);
-            throw new Error('La respuesta de la IA no es un JSON válido');
-        }
     }
 }

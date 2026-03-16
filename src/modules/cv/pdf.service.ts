@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as Handlebars from 'handlebars';
@@ -36,47 +36,59 @@ export interface GeneratedCvData {
     ats_optimized_content: Record<string, unknown>;
 }
 
+interface TemplateData {
+    name: string;
+    profile?: UserProfile;
+    cvData: GeneratedCvData;
+    targetRole: string;
+    targetCompany: string;
+}
+
 @Injectable()
 export class PdfService {
     private readonly logger = new Logger(PdfService.name);
+    private compiledTemplate: HandlebarsTemplateDelegate<TemplateData> | null = null;
 
     constructor(
         @InjectRepository(Cv)
         private cvRepository: Repository<Cv>,
         @InjectRepository(CvVersion)
         private cvVersionRepository: Repository<CvVersion>,
-    ) {}
+    ) {
+        this.compileTemplate();
+    }
+
+    private compileTemplate(): void {
+        try {
+            const template = this.getHarvardTemplate();
+            this.compiledTemplate = Handlebars.compile<TemplateData>(template);
+            this.logger.log('Plantilla Handlebars compilada exitosamente');
+        } catch (error) {
+            this.logger.error({
+                message: 'Error al compilar la plantilla Handlebars',
+                error: error instanceof Error ? error.message : 'Error desconocido',
+            });
+            throw new HttpException(
+                'Error al inicializar el servicio de PDF',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
 
     async generateHarvardPdf(cvId: number, versionId?: number): Promise<Buffer> {
-        this.logger.debug(`Generando PDF Harvard para CV ${cvId}`);
-
-        const cv = await this.cvRepository.findOne({
-            where: { id: cvId },
-            relations: ['user', 'user.profile'],
+        this.logger.log({
+            message: 'Iniciando generación de PDF Harvard',
+            cvId,
+            versionId,
         });
 
-        if (!cv) {
-            throw new NotFoundException('CV no encontrado');
-        }
-
-        let version: CvVersion | null;
-        if (versionId) {
-            version = await this.cvVersionRepository.findOne({
-                where: { id: versionId, cv_id: cvId },
-            });
-        } else {
-            version = await this.cvVersionRepository.findOne({
-                where: { cv_id: cvId },
-                order: { version_number: 'DESC' },
-            });
-        }
-
-        if (!version) {
-            throw new NotFoundException('Versión del CV no encontrada');
-        }
-
+        const cv = await this.findCvWithRelations(cvId);
+        const version = await this.findVersion(cvId, versionId);
+        
         const generatedData = version.content_json as unknown as GeneratedCvData;
         const profile = cv.user?.profile as UserProfile | undefined;
+
+        this.validateGeneratedData(generatedData);
 
         const html = this.buildHarvardTemplate({
             name: cv.user?.name || '',
@@ -89,14 +101,187 @@ export class PdfService {
         return this.generatePdfFromHtml(html);
     }
 
-    private buildHarvardTemplate(data: {
-        name: string;
-        profile?: UserProfile;
-        cvData: GeneratedCvData;
-        targetRole: string;
-        targetCompany: string;
-    }): string {
-        const template = `
+    private async findCvWithRelations(cvId: number): Promise<Cv> {
+        if (!cvId || cvId <= 0) {
+            throw new HttpException(
+                'ID de CV inválido',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+
+        const cv = await this.cvRepository.findOne({
+            where: { id: cvId },
+            relations: ['user', 'user.profile'],
+        });
+
+        if (!cv) {
+            this.logger.warn({ message: 'CV no encontrado', cvId });
+            throw new NotFoundException('CV no encontrado');
+        }
+
+        if (!cv.user) {
+            this.logger.warn({ message: 'Usuario no asociado al CV', cvId });
+            throw new NotFoundException('El CV no tiene un usuario asociado');
+        }
+
+        return cv;
+    }
+
+    private async findVersion(cvId: number, versionId?: number): Promise<CvVersion> {
+        let version: CvVersion | null;
+
+        if (versionId) {
+            if (versionId <= 0) {
+                throw new HttpException(
+                    'ID de versión inválido',
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
+
+            version = await this.cvVersionRepository.findOne({
+                where: { id: versionId, cv_id: cvId },
+            });
+        } else {
+            version = await this.cvVersionRepository.findOne({
+                where: { cv_id: cvId },
+                order: { version_number: 'DESC' },
+            });
+        }
+
+        if (!version) {
+            this.logger.warn({
+                message: 'Versión del CV no encontrada',
+                cvId,
+                versionId,
+            });
+            throw new NotFoundException(
+                versionId 
+                    ? 'Versión del CV no encontrada' 
+                    : 'No existen versiones generadas para este CV'
+            );
+        }
+
+        return version;
+    }
+
+    private validateGeneratedData(data: GeneratedCvData): void {
+        if (!data) {
+            throw new HttpException(
+                'El CV no tiene contenido generado',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+
+        const hasContent = data.summary || (data.skills && data.skills.length > 0) || (data.experience_highlights && data.experience_highlights.length > 0);
+
+        if (!hasContent) {
+            this.logger.warn({
+                message: 'Datos del CV generados están incompletos',
+                hasSummary: !!data.summary,
+                hasSkills: data.skills?.length ?? 0,
+                hasExperience: data.experience_highlights?.length ?? 0,
+            });
+            throw new HttpException(
+                'El CV no tiene suficiente contenido para generar el PDF',
+                HttpStatus.BAD_REQUEST,
+            );
+        }
+    }
+
+    private buildHarvardTemplate(data: TemplateData): string {
+        if (!this.compiledTemplate) {
+            throw new HttpException(
+                'Servicio de PDF no inicializado correctamente',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+
+        try {
+            return this.compiledTemplate(data);
+        } catch (error) {
+            this.logger.error({
+                message: 'Error al generar HTML desde la plantilla',
+                error: error instanceof Error ? error.message : 'Error desconocido',
+            });
+            throw new HttpException(
+                'Error al generar el contenido del PDF',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
+    private async generatePdfFromHtml(html: string): Promise<Buffer> {
+        let browser: puppeteer.Browser | null = null;
+
+        this.logger.debug('Iniciando Puppeteer para generar PDF');
+
+        try {
+            browser = await puppeteer.launch({
+                headless: true,
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-gpu',
+                ],
+                timeout: 30000,
+            });
+
+            const page = await browser.newPage();
+            
+            await page.setContent(html, { 
+                waitUntil: 'networkidle0',
+                timeout: 15000,
+            });
+
+            const pdf = await page.pdf({
+                format: 'A4',
+                printBackground: true,
+                margin: {
+                    top: '20px',
+                    bottom: '20px',
+                    left: '20px',
+                    right: '20px',
+                },
+            });
+
+            this.logger.log({
+                message: 'PDF generado exitosamente',
+                size: pdf.length,
+            });
+
+            return Buffer.from(pdf);
+        } catch (error) {
+            this.logger.error({
+                message: 'Error al generar PDF con Puppeteer',
+                error: error instanceof Error ? error.message : 'Error desconocido',
+                stack: error instanceof Error ? error.stack : undefined,
+            });
+
+            if (error instanceof HttpException) {
+                throw error;
+            }
+
+            throw new HttpException(
+                'Error al generar el archivo PDF. Por favor, intente de nuevo.',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        } finally {
+            if (browser) {
+                try {
+                    await browser.close();
+                } catch (closeError) {
+                    this.logger.warn({
+                        message: 'Error al cerrar el navegador Puppeteer',
+                        error: closeError instanceof Error ? closeError.message : 'Error desconocido',
+                    });
+                }
+            }
+        }
+    }
+
+    private getHarvardTemplate(): string {
+        return `
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -153,7 +338,7 @@ export class PdfService {
         }
         
         .contact-info span:not(:last-child):after {
-            content: " |";
+            content: "|";
         }
         
         .section {
@@ -343,37 +528,5 @@ export class PdfService {
 </body>
 </html>
 `;
-
-        const compiled = Handlebars.compile(template);
-        return compiled(data);
-    }
-
-    private async generatePdfFromHtml(html: string): Promise<Buffer> {
-        this.logger.debug('Iniciando generación de PDF con Puppeteer');
-
-        const browser = await puppeteer.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        });
-
-        try {
-            const page = await browser.newPage();
-            await page.setContent(html, { waitUntil: 'networkidle0' });
-
-            const pdf = await page.pdf({
-                format: 'A4',
-                printBackground: true,
-                margin: {
-                    top: '20px',
-                    bottom: '20px',
-                    left: '20px',
-                    right: '20px',
-                },
-            });
-
-            return Buffer.from(pdf);
-        } finally {
-            await browser.close();
-        }
     }
 }

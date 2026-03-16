@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, QueryRunner } from 'typeorm';
 import { Cv } from './entity/cv.entity';
@@ -174,11 +174,37 @@ export class CvService {
     }
 
     async generateCvWithAi(data: GenerateCvDto, userId: number) {
-        this.logger.debug(`Generando CV con IA para usuario ${userId} - ${data.target_role} en ${data.target_company}`);
+        this.logger.log({
+            message: 'Iniciando generación de CV con IA',
+            userId,
+            targetRole: data.target_role,
+            targetCompany: data.target_company,
+        });
+
+        if (!userId || userId <= 0) {
+            throw new HttpException('ID de usuario inválido', HttpStatus.BAD_REQUEST);
+        }
 
         const user = await this.usersService.getUserData(userId);
         if (!user) {
+            this.logger.warn({ message: 'Usuario no encontrado', userId });
             throw new NotFoundException('Usuario no encontrado');
+        }
+
+        const hasProfileData = user.profile || (user.skills && user.skills.length > 0) || (user.experiences && user.experiences.length > 0);
+        
+        if (!hasProfileData) {
+            this.logger.warn({
+                message: 'El usuario no tiene datos suficientes para generar un CV',
+                userId,
+                hasProfile: !!user.profile,
+                skillsCount: user.skills?.length ?? 0,
+                experiencesCount: user.experiences?.length ?? 0,
+            });
+            throw new HttpException(
+                'No tienes suficientes datos en tu perfil. Completa tu información personal, skills y experiencias primero.',
+                HttpStatus.BAD_REQUEST,
+            );
         }
 
         const userData: UserData = {
@@ -205,11 +231,28 @@ export class CvService {
             projects: user.projects || [],
         };
 
-        const generatedCv = await this.aiService.generateCvWithDeepSeek(userData, {
-            target_role: data.target_role,
-            target_company: data.target_company,
-            job_description: data.job_description,
-        });
+        let generatedCv: GeneratedCvData;
+        
+        try {
+            generatedCv = await this.aiService.generateCvWithDeepSeek(userData, {
+                target_role: data.target_role,
+                target_company: data.target_company,
+                job_description: data.job_description,
+            });
+        } catch (error) {
+            if (error instanceof HttpException) {
+                throw error;
+            }
+            this.logger.error({
+                message: 'Error al generar CV con IA',
+                error: error instanceof Error ? error.message : 'Error desconocido',
+                userId,
+            });
+            throw new HttpException(
+                'Error al generar el CV con IA. Por favor, intente de nuevo.',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
 
         const queryRunner = this.dataSource.createQueryRunner();
         await queryRunner.connect();
@@ -249,7 +292,13 @@ export class CvService {
             await queryRunner.manager.save(version);
 
             await queryRunner.commitTransaction();
-            this.logger.log(`CV ${savedCv.id} generado exitosamente con IA`);
+            
+            this.logger.log({
+                message: 'CV generado exitosamente con IA',
+                cvId: savedCv.id,
+                versionId: version.id,
+                userId,
+            });
 
             return {
                 cv_id: savedCv.id,
@@ -261,8 +310,15 @@ export class CvService {
             };
         } catch (error) {
             await queryRunner.rollbackTransaction();
-            this.logger.error(`Error al generar CV con IA: ${error.message}`);
-            throw error;
+            this.logger.error({
+                message: 'Error al guardar CV en la base de datos',
+                error: error instanceof Error ? error.message : 'Error desconocido',
+                userId,
+            });
+            throw new HttpException(
+                'Error al guardar el CV. Por favor, intente de nuevo.',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+            );
         } finally {
             await queryRunner.release();
         }
