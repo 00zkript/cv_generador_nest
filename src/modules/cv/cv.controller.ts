@@ -1,9 +1,12 @@
-import { Controller, Delete, Get, Param, Post, Put, Body, Req, UseGuards, ParseIntPipe, Query } from "@nestjs/common";
+import { Controller, Delete, Get, Param, Post, Put, Body, Req, UseGuards, ParseIntPipe, Query, Res } from "@nestjs/common";
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags, ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
 import { CvService } from "./cv.service";
+import { PdfService } from "./pdf.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Request } from "express";
+import { Response } from "express";
 import { CreateCvDto, UpdateCvDto, CreateFullCvDto } from "./dto/cv.dto";
+import { GenerateCvDto } from "./dto/generate-cv.dto";
 import { PageOptionsDto, PaginateDto } from "../../dtos/paginate.dto";
 import { Cv } from "./entity/cv.entity";
 
@@ -14,7 +17,8 @@ import { Cv } from "./entity/cv.entity";
 export class CvController {
 
     constructor(
-        private readonly cvService: CvService
+        private readonly cvService: CvService,
+        private readonly pdfService: PdfService,
     ) { }
 
     @ApiOperation({ summary: 'Obtener todos los CVs del usuario actual (paginado)' })
@@ -53,5 +57,33 @@ export class CvController {
     @Delete(':id')
     destroy(@Param('id', ParseIntPipe) id: number) {
         return this.cvService.delete(id);
+    }
+
+    @ApiOperation({ summary: 'Generar CV optimizado con IA DeepSeek' })
+    @ApiCreatedResponse({ type: String })
+    @Post('generate')
+    generateWithAi(@Req() req: Request, @Body() data: GenerateCvDto) {
+        const user = req.user as { id: number };
+        return this.cvService.generateCvWithAi(data, user.id);
+    }
+
+    @ApiOperation({ summary: 'Exportar CV a PDF formato Harvard' })
+    @ApiOkResponse({ type: String })
+    @Get(':id/pdf')
+    async exportPdf(
+        @Param('id', ParseIntPipe) id: number,
+        @Query('versionId') versionId: string,
+        @Res() res: Response
+    ) {
+        const versionIdNum = versionId ? parseInt(versionId, 10) : undefined;
+        const pdfBuffer = await this.pdfService.generateHarvardPdf(id, versionIdNum);
+        
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="cv-${id}.pdf"`,
+            'Content-Length': pdfBuffer.length,
+        });
+        
+        res.end(pdfBuffer);
     }
 }

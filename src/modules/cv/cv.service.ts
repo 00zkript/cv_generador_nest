@@ -5,7 +5,10 @@ import { Cv } from './entity/cv.entity';
 import { CvJobKeyword } from './entity/cv-job-keyword.entity';
 import { CvVersion } from './entity/cv-version.entity';
 import { CreateFullCvDto } from './dto/cv.dto';
+import { GenerateCvDto } from './dto/generate-cv.dto';
 import { PageOptionsDto, PaginateDto } from '../../dtos/paginate.dto';
+import { AiService, UserData, GeneratedCvData } from '../ai/ai.service';
+import { UsersService } from '../auth/users.service';
 
 @Injectable()
 export class CvService {
@@ -20,6 +23,8 @@ export class CvService {
         @InjectRepository(CvVersion)
         private cvVersionRepository: Repository<CvVersion>,
         private dataSource: DataSource,
+        private aiService: AiService,
+        private usersService: UsersService,
     ) {}
 
     async getAll(userId?: number, pageOptions?: PageOptionsDto): Promise<PaginateDto<Cv>> {
@@ -166,6 +171,101 @@ export class CvService {
         version.position = count;
         Object.assign(version, data);
         return this.cvVersionRepository.save(version);
+    }
+
+    async generateCvWithAi(data: GenerateCvDto, userId: number) {
+        this.logger.debug(`Generando CV con IA para usuario ${userId} - ${data.target_role} en ${data.target_company}`);
+
+        const user = await this.usersService.getUserData(userId);
+        if (!user) {
+            throw new NotFoundException('Usuario no encontrado');
+        }
+
+        const userData: UserData = {
+            name: user.name || '',
+            profile: user.profile ? {
+                headline: user.profile.headline,
+                about: user.profile.about,
+                phone: user.profile.phone,
+                location: user.profile.location,
+                linkedin_url: user.profile.linkedin_url,
+                github_url: user.profile.github_url,
+                portfolio_url: user.profile.portfolio_url,
+            } : {},
+            skills: user.skills || [],
+            experiences: (user.experiences || []).map(exp => ({
+                company: exp.company,
+                role: exp.role,
+                start_date: exp.start_date,
+                end_date: exp.end_date,
+                is_current: exp.is_current,
+                description: exp.description,
+            })),
+            education: user.education || [],
+            projects: user.projects || [],
+        };
+
+        const generatedCv = await this.aiService.generateCvWithDeepSeek(userData, {
+            target_role: data.target_role,
+            target_company: data.target_company,
+            job_description: data.job_description,
+        });
+
+        const queryRunner = this.dataSource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try {
+            const cv = this.cvRepository.create({
+                title: data.title || `${data.target_role} - ${data.target_company}`,
+                target_role: data.target_role,
+                target_company: data.target_company,
+                job_description: data.job_description,
+                user_id: userId,
+            });
+            const savedCv = await queryRunner.manager.save(cv);
+
+            if (generatedCv.keywords && generatedCv.keywords.length > 0) {
+                const jobKeywords = generatedCv.keywords.map((keyword, index) =>
+                    this.cvJobKeywordRepository.create({
+                        cv_id: savedCv.id,
+                        keyword: keyword,
+                        weight: 1,
+                        position: index,
+                    })
+                );
+                await queryRunner.manager.save(jobKeywords);
+            }
+
+            const versionCount = await this.cvVersionRepository.count({ where: { cv_id: savedCv.id } });
+            const version = this.cvVersionRepository.create({
+                cv_id: savedCv.id,
+                version_number: versionCount + 1,
+                position: versionCount,
+                prompt_used: 'deepseek-chat',
+                content_json: generatedCv as unknown as Record<string, unknown>,
+                ats_score: (generatedCv.ats_optimized_content as { ats_score_estimate?: number })?.ats_score_estimate || 0,
+            });
+            await queryRunner.manager.save(version);
+
+            await queryRunner.commitTransaction();
+            this.logger.log(`CV ${savedCv.id} generado exitosamente con IA`);
+
+            return {
+                cv_id: savedCv.id,
+                version_id: version.id,
+                target_role: savedCv.target_role,
+                target_company: savedCv.target_company,
+                generated_data: generatedCv,
+                created_at: savedCv.created_at,
+            };
+        } catch (error) {
+            await queryRunner.rollbackTransaction();
+            this.logger.error(`Error al generar CV con IA: ${error.message}`);
+            throw error;
+        } finally {
+            await queryRunner.release();
+        }
     }
 
     private async startTransaction(): Promise<QueryRunner> {
