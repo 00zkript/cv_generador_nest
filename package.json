@@ -23,7 +23,6 @@
     "migration:run": "npm run typeorm migration:run",
     "migration:revert": "npm run typeorm migration:revert",
     "migration:create": "npx typeorm migration:create"
-    
   },
   "dependencies": {
     "@anatine/zod-nestjs": "^2.0.12",
@@ -41,6 +40,7 @@
     "class-validator": "^0.14.4",
     "dayjs": "^1.11.13",
     "handlebars": "^4.7.8",
+    "openai": "^6.29.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.20.0",

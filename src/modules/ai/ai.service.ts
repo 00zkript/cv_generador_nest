@@ -1,5 +1,6 @@
 import { HttpException, HttpStatus, Logger, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import OpenAI from 'openai';
 
 export interface UserData {
     profile: {
@@ -66,50 +67,22 @@ export interface GeneratedCvData {
     ats_optimized_content: Record<string, unknown>;
 }
 
-interface ApiErrorResponse {
-    error?: {
-        message?: string;
-        code?: string;
-        type?: string;
-    };
-}
-
-interface ChoicesMessage {
-    content?: string;
-}
-
-interface Choices {
-    message?: ChoicesMessage;
-}
-
-interface DeepSeekResponse {
-    id?: string;
-    choices?: Choices[];
-    usage?: {
-        prompt_tokens?: number;
-        completion_tokens?: number;
-        total_tokens?: number;
-    };
-    error?: {
-        message?: string;
-        type?: string;
-        code?: string;
-    };
-}
-
 @Injectable()
 export class AiService {
     private readonly logger = new Logger(AiService.name);
-    private readonly deepseekApiKey: string;
-    private readonly deepseekBaseUrl = 'https://api.deepseek.com/v1';
-    private readonly model = 'deepseek-chat';
+    private openai: OpenAI;
 
     constructor(private configService: ConfigService) {
-        this.deepseekApiKey = this.configService.get<string>('DEEPSEEK_API_KEY') || '';
+        const apiKey = this.configService.get<string>('DEEPSEEK_API_KEY') || '';
         
-        if (!this.deepseekApiKey) {
+        if (!apiKey) {
             this.logger.warn('DEEPSEEK_API_KEY no está configurada en las variables de entorno');
         }
+
+        this.openai = new OpenAI({
+            apiKey,
+            baseURL: 'https://api.deepseek.com',
+        });
     }
 
     async generateCvWithDeepSeek(userData: UserData, jobOffer: JobOfferData): Promise<GeneratedCvData> {
@@ -125,8 +98,23 @@ export class AiService {
         const prompt = this.buildPrompt(userData, jobOffer);
 
         try {
-            const response = await this.callDeepSeekApi(prompt);
-            const content = response.choices?.[0]?.message?.content;
+            const response = await this.openai.chat.completions.create({
+                model: 'deepseek-chat',
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'Eres un experto en optimización de CVs para pasar filtros ATS y atraer reclutadores. Devuelve siempre un JSON válido con la estructura especificada.',
+                    },
+                    {
+                        role: 'user',
+                        content: prompt,
+                    },
+                ],
+                temperature: 0.7,
+                max_tokens: 4000,
+            });
+
+            const content = response.choices[0]?.message?.content;
 
             this.logger.log({
                 message: 'Respuesta de DeepSeek recibida',
@@ -181,77 +169,7 @@ export class AiService {
         }
     }
 
-    private async callDeepSeekApi(prompt: string): Promise<DeepSeekResponse> {
-        if (!this.deepseekApiKey) {
-            this.logger.error('DeepSeek API key no configurada');
-            throw new HttpException(
-                'El servicio de IA no está configurado correctamente. Contacte al administrador.',
-                HttpStatus.SERVICE_UNAVAILABLE,
-            );
-        }
-
-        const response = await fetch(`${this.deepseekBaseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.deepseekApiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: this.model,
-                messages: [
-                    {
-                        role: 'system',
-                        content: 'Eres un experto en optimización de CVs para pasar filtros ATS y atraer reclutadores. Devuelve siempre un JSON válido con la estructura especificada.',
-                    },
-                    {
-                        role: 'user',
-                        content: prompt,
-                    },
-                ],
-                temperature: 0.7,
-                max_tokens: 4000,
-            }),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json() as ApiErrorResponse;
-            this.logger.error({
-                message: 'Error en la API de DeepSeek',
-                status: response.status,
-                error: errorData.error?.message,
-            });
-
-            if (response.status === 401) {
-                throw new HttpException(
-                    'Error de autenticación con el servicio de IA',
-                    HttpStatus.UNAUTHORIZED,
-                );
-            }
-
-            if (response.status === 429) {
-                throw new HttpException(
-                    'Límite de solicitudes alcanzado. Intente más tarde.',
-                    HttpStatus.TOO_MANY_REQUESTS,
-                );
-            }
-
-            if (response.status >= 500) {
-                throw new HttpException(
-                    'El servicio de IA no está disponible. Intente más tarde.',
-                    HttpStatus.SERVICE_UNAVAILABLE,
-                );
-            }
-
-            throw new HttpException(
-                errorData.error?.message || 'Error al generar CV con IA',
-                HttpStatus.BAD_GATEWAY,
-            );
-        }
-
-        return response.json() as Promise<DeepSeekResponse>;
-    }
-
-    private parseAiResponse(content: string | undefined): GeneratedCvData {
+    private parseAiResponse(content: string | null | undefined): GeneratedCvData {
         if (!content) {
             this.logger.error('La respuesta de la IA está vacía');
             throw new HttpException(
@@ -325,6 +243,35 @@ export class AiService {
     private handleAiError(error: unknown): void {
         if (error instanceof HttpException) {
             throw error;
+        }
+
+        if (error instanceof OpenAI.APIError) {
+            this.logger.error({
+                message: 'Error de API de OpenAI/DeepSeek',
+                status: error.status,
+                error: error.message,
+            });
+
+            if (error.status === 401) {
+                throw new HttpException(
+                    'Error de autenticación con el servicio de IA',
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
+
+            if (error.status === 429) {
+                throw new HttpException(
+                    'Límite de solicitudes alcanzado. Intente más tarde.',
+                    HttpStatus.TOO_MANY_REQUESTS,
+                );
+            }
+
+            if (error.status && error.status >= 500) {
+                throw new HttpException(
+                    'El servicio de IA no está disponible. Intente más tarde.',
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                );
+            }
         }
 
         const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
