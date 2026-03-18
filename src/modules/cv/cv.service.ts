@@ -133,7 +133,7 @@ export class CvService {
             return this.getById(savedCv.id);
         } catch (error) {
             await queryRunner.rollbackTransaction();
-            this.logger.error(`Error al crear CV: ${error.message}`);
+            this.logger.error(`Error al crear CV: ${error instanceof Error ? error.message : 'Unknown error'}`);
             throw error;
         } finally {
             await queryRunner.release();
@@ -234,7 +234,7 @@ export class CvService {
         let generatedCv: GeneratedCvData;
         
         try {
-            generatedCv = await this.aiService.generateCvWithDeepSeek(userData, {
+            generatedCv = await this.aiService.generateCvWithAi(userData, {
                 target_role: data.target_role,
                 target_company: data.target_company,
                 job_description: data.job_description,

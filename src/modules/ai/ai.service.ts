@@ -1,6 +1,7 @@
 import { HttpException, HttpStatus, Logger, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
+import { AiServiceSelector } from './services/ai-service-selector';
+import { AiRequest, IAiService } from './interfaces/ai-service.interface';
 
 export interface UserData {
     profile: {
@@ -70,24 +71,20 @@ export interface GeneratedCvData {
 @Injectable()
 export class AiService {
     private readonly logger = new Logger(AiService.name);
-    private openai: OpenAI;
+    private readonly aiService: IAiService;
 
-    constructor(private configService: ConfigService) {
-        const apiKey = this.configService.get<string>('DEEPSEEK_API_KEY') || '';
-        
-        if (!apiKey) {
-            this.logger.warn('DEEPSEEK_API_KEY no está configurada en las variables de entorno');
-        }
-
-        this.openai = new OpenAI({
-            apiKey,
-            baseURL: 'https://api.deepseek.com',
-        });
+    constructor(
+        private configService: ConfigService,
+        private aiSelector: AiServiceSelector,
+    ) {
+        this.aiService = this.aiSelector.getAiService();
     }
 
-    async generateCvWithDeepSeek(userData: UserData, jobOffer: JobOfferData): Promise<GeneratedCvData> {
+    async generateCvWithAi(userData: UserData, jobOffer: JobOfferData): Promise<GeneratedCvData> {
+        const providerType = this.configService.get<string>('AI_PROVIDER') || 'deepseek';
+        
         this.logger.log({
-            message: 'Iniciando generación de CV con IA',
+            message: `Iniciando generación de CV con IA (proveedor: ${providerType})`,
             targetRole: jobOffer.target_role,
             targetCompany: jobOffer.target_company,
             userName: userData.name,
@@ -98,31 +95,18 @@ export class AiService {
         const prompt = this.buildPrompt(userData, jobOffer);
 
         try {
-            const response = await this.openai.chat.completions.create({
-                model: 'deepseek-chat',
-                messages: [
-                    {
-                        role: 'system',
-                        content: 'Eres un experto en optimización de CVs para pasar filtros ATS y atraer reclutadores. Devuelve siempre un JSON válido con la estructura especificada.',
-                    },
-                    {
-                        role: 'user',
-                        content: prompt,
-                    },
-                ],
-                temperature: 0.7,
-                max_tokens: 4000,
+            const response = await this.aiService.generateCvContent({
+                systemPrompt: 'Eres un experto en optimización de CVs para pasar filtros ATS y atraer reclutadores. Devuelve siempre un JSON válido con la estructura especificada.',
+                userPrompt: prompt,
             });
 
-            const content = response.choices[0]?.message?.content;
-
             this.logger.log({
-                message: 'Respuesta de DeepSeek recibida',
-                hasContent: !!content,
+                message: `Respuesta de ${providerType} recibida`,
+                hasContent: !!response.content,
                 tokensUsed: response.usage?.total_tokens,
             });
 
-            return this.parseAiResponse(content);
+            return this.parseAiResponse(response.content);
         } catch (error) {
             this.handleAiError(error);
             throw new HttpException(
@@ -245,28 +229,29 @@ export class AiService {
             throw error;
         }
 
-        if (error instanceof OpenAI.APIError) {
+        if (error && typeof error === 'object' && 'status' in error) {
+            const apiError = error as { status: number; message: string };
             this.logger.error({
-                message: 'Error de API de OpenAI/DeepSeek',
-                status: error.status,
-                error: error.message,
+                message: 'Error de API de IA',
+                status: apiError.status,
+                error: apiError.message,
             });
 
-            if (error.status === 401) {
+            if (apiError.status === 401) {
                 throw new HttpException(
                     'Error de autenticación con el servicio de IA',
                     HttpStatus.BAD_REQUEST,
                 );
             }
 
-            if (error.status === 429) {
+            if (apiError.status === 429) {
                 throw new HttpException(
                     'Límite de solicitudes alcanzado. Intente más tarde.',
                     HttpStatus.TOO_MANY_REQUESTS,
                 );
             }
 
-            if (error.status && error.status >= 500) {
+            if (apiError.status && apiError.status >= 500) {
                 throw new HttpException(
                     'El servicio de IA no está disponible. Intente más tarde.',
                     HttpStatus.SERVICE_UNAVAILABLE,
