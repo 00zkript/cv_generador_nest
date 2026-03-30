@@ -139,6 +139,11 @@ export class EducationDto {
     @IsOptional()
     field_of_study?: string;
 
+    @ApiProperty({ example: 'Lima, Perú', required: false })
+    @IsString()
+    @IsOptional()
+    location?: string;
+
     @ApiProperty({ example: '2015-09-01', required: false })
     @IsDateString()
     @IsOptional()
@@ -148,6 +153,11 @@ export class EducationDto {
     @IsDateString()
     @IsOptional()
     end_date?: string;
+
+    @ApiProperty({ example: false, required: false })
+    @IsBoolean()
+    @IsOptional()
+    current?: boolean;
 }
 
 export class ProjectDto {

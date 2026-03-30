@@ -18,11 +18,17 @@ export class UserEducation {
     @Column({ name: 'field_of_study', nullable: true })
     field_of_study!: string;
 
+    @Column({ nullable: true })
+    location!: string;
+
     @Column({ name: 'start_date', type: 'date', nullable: true })
     start_date!: Date;
 
     @Column({ name: 'end_date', type: 'date', nullable: true })
     end_date!: Date;
+
+    @Column({ default: false })
+    current!: boolean;
 
     @Column({ default: 0 })
     position!: number;
